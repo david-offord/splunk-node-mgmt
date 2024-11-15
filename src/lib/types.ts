@@ -1,4 +1,4 @@
-interface Host {
+export interface Host {
     id: string,
     hostname: string,
     ipAddress: string,
