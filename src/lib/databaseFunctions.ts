@@ -3,7 +3,9 @@ import sqlite3 from 'sqlite3';
 import type { Database } from 'sqlite3'
 import db from '$lib/server/db';
 
+//***************************************
 //BEGIN PUBLIC FACING FUNCTIONS
+//***************************************
 
 //gets a list of every host
 export const getAllHosts = async () => {
@@ -73,8 +75,27 @@ export const addUpdateHost = async (updateHost: Host) => {
     return id;
 }
 
+export const deleteSingleHost = async (hostId: number) => {
+    const loadDataPromise = new Promise<Host[]>((resolve, reject) => {
+        const query = `DELETE FROM Hosts WHERE id=${hostId};`;
 
+        db.all<Host>(query, (err: Error | null, rows: Host[]) => {
+            if (err) {
+                reject(err);
+                return;
+            }
+            resolve(rows)
+        })
+    });
+    return true;
+}
+
+
+//***************************************
 //BEGIN PRIVATE FUNCTIONS
+//***************************************
+
+
 //Load the database file
 const loadDb = async () => {
     const db = new sqlite3.Database('data.db', (err) => {

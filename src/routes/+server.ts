@@ -3,6 +3,12 @@ import type { Host } from "$lib/types.ts"
 import * as df from '$lib/databaseFunctions.js' //example of importing a bunch of functions
 import * as af from '$lib/ansibleFunctions.js' //example of importing a bunch of functions
 
+
+//for updating/adding host
+export async function GET({ request }) {
+    return json(await df.getAllHosts());
+}
+
 //for updating/adding host
 export async function POST({ request }) {
     //get the host from the request
@@ -21,6 +27,21 @@ export async function POST({ request }) {
     if (results !== -1) {
         await af.addUpdateHostInventory(oldHost, newHost);
     }
+
+    return json(host);
+}
+
+
+//for updating/adding host
+export async function DELETE({ request }) {
+    //get the host from the request
+    let host: Host = await request.json();
+
+    //get the old host from the db
+    let oldHost = await df.getSingleHost(host.id);
+
+    //delete from the db
+    await df.deleteSingleHost(host.id);
 
     return json(host);
 }

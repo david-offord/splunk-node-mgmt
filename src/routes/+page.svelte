@@ -1,8 +1,11 @@
 <script lang="ts">
     import type { Host } from "$lib/types";
     import type { PageServerData } from "./$types";
+    import type { Modal } from "$lib/bs5/bootstrap.bundle.min.js";
     import { page } from "$app/stores";
-    //import bootstrap from "$lib/bs5/bootstrap.bundle.min.js";
+
+    //get the modal instance
+    let hostModal: Modal = null;
 
     //declare vars for modal
     let modalHost: Host = null;
@@ -14,8 +17,19 @@
 
     //get the hosts from the db
     let { data }: { data: PageServerData } = $props();
-    const hosts = data.hosts;
+    let hosts = $state(data.hosts);
 
+    function showHideModal(show: boolean) {
+        if (hostModal == null) {
+            hostModal = new bootstrap.Modal(document.getElementById("hostEditModal"));
+        }
+
+        if (show) {
+            hostModal.show();
+        } else {
+            hostModal.hide();
+        }
+    }
     //set listeners
     function setModalValues(hostId: number) {
         //get host
@@ -23,8 +37,10 @@
         modalHostVal = modalHost?.hostname!;
         modalIpVal = modalHost?.ipAddress!;
         modalCustomerCodeVal = modalHost?.customerCode!;
+        showHideModal(true);
     }
 
+    //show modal for making a new host
     function showModalNewHost() {
         //null out the values
         modalHost = null;
@@ -33,8 +49,13 @@
         modalCustomerCodeVal = "";
 
         //show the modal
-        var myModal = new bootstrap.Modal(document.getElementById("hostEditModal"));
-        myModal.show();
+        showHideModal(true);
+    }
+
+    //get all hosts from db
+    async function getHosts() {
+        const response = await fetch($page.url.pathname, { method: "GET" });
+        hosts = await response.json();
     }
 
     //call an api
@@ -48,9 +69,18 @@
         };
 
         const response = await fetch($page.url.pathname, { method: "POST", body: JSON.stringify(hostForApi) });
-        const result = await response.json();
-        console.log(result); // results in "test"
-        debug = result;
+        await response.json();
+
+        //get an updated list of hosts
+        showHideModal(false);
+        await getHosts();
+    }
+
+    //delete a host from db
+    async function deleteHost(selectedHost: Host) {
+        const response = await fetch($page.url.pathname, { method: "DELETE", body: JSON.stringify(selectedHost) });
+        await response.json();
+        await getHosts();
     }
 </script>
 
@@ -83,10 +113,10 @@
                     <th>{host.ipAddress}</th>
                     <th>{host.customerCode}</th>
                     <th>
-                        <button aria-label="Edit Host" data-bs-toggle="modal" data-bs-target="#hostEditModal" onclick={() => setModalValues(host.id)}>
+                        <button aria-label="Edit Host" onclick={() => setModalValues(host.id)}>
                             <i class="bi bi-pencil"></i>
                         </button>
-                        <button aria-label="Delete Host">
+                        <button aria-label="Delete Host" onclick={() => deleteHost(host)}>
                             <i class="bi bi-trash"></i>
                         </button>
                     </th>
