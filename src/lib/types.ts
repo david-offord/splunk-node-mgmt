@@ -1,5 +1,5 @@
 export interface Host {
-    id: string,
+    id: number,
     hostname: string,
     ipAddress: string,
     customerCode: string

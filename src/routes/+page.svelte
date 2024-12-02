@@ -1,5 +1,16 @@
 <script lang="ts">
+    import type { Host } from "$lib/types";
     import type { PageServerData } from "./$types";
+    import { page } from "$app/stores";
+    //import bootstrap from "$lib/bs5/bootstrap.bundle.min.js";
+
+    //declare vars for modal
+    let modalHost: Host = null;
+
+    let modalHostVal: string = $state("");
+    let modalIpVal: string = $state("");
+    let modalCustomerCodeVal: string = $state("");
+    let debug: string = $state("");
 
     //get the hosts from the db
     let { data }: { data: PageServerData } = $props();
@@ -7,12 +18,52 @@
 
     //set listeners
     function setModalValues(hostId: number) {
-        console.log("fuck");
+        //get host
+        modalHost = hosts.find((x: Host) => x.id == hostId);
+        modalHostVal = modalHost?.hostname!;
+        modalIpVal = modalHost?.ipAddress!;
+        modalCustomerCodeVal = modalHost?.customerCode!;
+    }
+
+    function showModalNewHost() {
+        //null out the values
+        modalHost = null;
+        modalHostVal = "";
+        modalIpVal = "";
+        modalCustomerCodeVal = "";
+
+        //show the modal
+        var myModal = new bootstrap.Modal(document.getElementById("hostEditModal"));
+        myModal.show();
+    }
+
+    //call an api
+    async function saveHostValues(selectedHost: Host) {
+        //create a new obj
+        let hostForApi: Host = {
+            id: modalHost?.id ?? null,
+            ipAddress: modalIpVal,
+            hostname: modalHostVal,
+            customerCode: modalCustomerCodeVal,
+        };
+
+        const response = await fetch($page.url.pathname, { method: "POST", body: JSON.stringify(hostForApi) });
+        const result = await response.json();
+        console.log(result); // results in "test"
+        debug = result;
     }
 </script>
 
 <svelte:head>
     <title>All Hosts</title>
+
+    <style>
+        #TestFloatingAdd {
+            position: absolute;
+            right: 20px;
+            bottom: 20px;
+        }
+    </style>
 </svelte:head>
 
 <div class="container">
@@ -57,22 +108,38 @@
                 <form>
                     <div class="mb-3">
                         <label for="inputHostname" class="form-label">Hostname</label>
-                        <input type="text" class="form-control" id="inputHostname" />
+                        <input bind:value={modalHostVal} type="text" class="form-control" id="inputHostname" />
                     </div>
                     <div class="mb-3">
                         <label for="inputIpAddress" class="form-label">IP Address</label>
-                        <input type="text" class="form-control" id="inputIpAddress" />
+                        <input bind:value={modalIpVal} type="text" class="form-control" id="inputIpAddress" />
                     </div>
                     <div class="mb-3">
                         <label for="inputCustomerCode" class="form-label">Customer Code</label>
-                        <input type="text" class="form-control" id="inputCustomerCode" />
+                        <input bind:value={modalCustomerCodeVal} type="text" class="form-control" id="inputCustomerCode" />
                     </div>
                 </form>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-primary">Save changes</button>
+                <button
+                    type="button"
+                    class="btn btn-primary"
+                    onclick={() => {
+                        saveHostValues(null);
+                    }}>Save changes</button
+                >
             </div>
         </div>
     </div>
 </div>
+
+<span id="TestFloatingAdd">
+    <button
+        class="btn btn-success btn-lg"
+        type="button"
+        onclick={() => {
+            showModalNewHost();
+        }}>Add</button
+    >
+</span>

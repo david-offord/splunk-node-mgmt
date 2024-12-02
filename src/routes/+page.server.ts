@@ -21,3 +21,4 @@ export const load: PageServerLoad = async ({ locals }) => {
         hosts: rows
     };
 };
+
