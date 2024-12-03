@@ -2,6 +2,7 @@ This is an application to manage multiple Splunk instances for adding apps.
 
 
 TODO:
+    
     ✅ ADD EDIT AND NEW HOST FUNCTIONALITY
 
     ✅ ADD LOGIC FOR CREATING INI FILE FOR HOSTS FOR ANSIBLE
