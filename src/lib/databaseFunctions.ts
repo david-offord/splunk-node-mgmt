@@ -1,6 +1,6 @@
 import type { Host } from "$lib/types.ts"
 import sqlite3 from 'sqlite3';
-import type { Database } from 'sqlite3'
+import type { Database, Statement, RunResult } from 'sqlite3'
 import db from '$lib/server/db';
 
 //***************************************
@@ -110,25 +110,25 @@ const loadDb = async () => {
 
 //Get a single host based on ID. Returns null if no host is found
 const insertNewHost = async (host: Host) => {
-    const loadDataPromise = new Promise<Host[]>((resolve, reject) => {
+    const loadDataPromise = new Promise<number>((resolve, reject) => {
         const stmt = db.prepare(`INSERT INTO Hosts 
         ( customerCode, ipAddress, hostname, ansibleName)
         VALUES
         (?, ?, ?, ?)
         `);
 
-        stmt.run(host.customerCode, host.ipAddress, host.hostname, host.customerCode + '_' + host.hostname.replace('-', '_'), (err: Error | null, rows: Host[]) => {
+        stmt.run(host.customerCode, host.ipAddress, host.hostname, host.customerCode + '_' + host.hostname.replaceAll('-', '_'), function (this: RunResult, err: Error | null) {
             if (err) {
                 reject(err);
                 return;
             }
-            resolve(rows)
+            resolve(this.lastID);
         });
     });
 
     //check how many rows came back
-    const row = await loadDataPromise;
-    return row[0].id;
+    const newId: number = await loadDataPromise;
+    return newId;
 }
 
 //Get a single host based on ID. Returns null if no host is found
@@ -139,7 +139,7 @@ const updateExistingHost = async (host: Host) => {
         WHERE id=?;
         `);
 
-        stmt.run(host.customerCode, host.ipAddress, host.hostname, host.customerCode + '_' + host.hostname.replace('-', '_'), host.id, (err: Error | null, rows: Host[]) => {
+        stmt.run(host.customerCode, host.ipAddress, host.hostname, host.customerCode + '_' + host.hostname.replaceAll('-', '_'), host.id, (err: Error | null, rows: Host[]) => {
             if (err) {
                 reject(err);
                 return;

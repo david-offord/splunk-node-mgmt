@@ -1,9 +1,14 @@
 <script lang="ts">
-    import type { Host } from "$lib/types";
+    import type { Host, ValidationObject } from "$lib/types";
     import type { PageServerData } from "./$types";
     import type { Modal } from "bootstrap";
     import type * as bootstrap from "bootstrap";
     import { page } from "$app/stores";
+    import { redirect } from "@sveltejs/kit";
+
+    //get the hosts from the db
+    let { data, form }: { data: PageServerData; form: FormData } = $props();
+    let hosts = $state(data.hosts);
 
     //get the modal instance
     let hostModal: Modal = null;
@@ -11,15 +16,15 @@
     //declare vars for modal
     let modalHost: Host = null;
 
+    //used for inputs in modal
     let modalHostVal: string = $state("");
     let modalIpVal: string = $state("");
     let modalCustomerCodeVal: string = $state("");
-    let debug: string = $state("");
 
-    //get the hosts from the db
-    let { data }: { data: PageServerData } = $props();
-    let hosts = $state(data.hosts);
+    //used for validation later
+    let modalValidation: ValidationObject = $state();
 
+    //toggle modal
     function showHideModal(show: boolean) {
         if (hostModal == null) {
             hostModal = new bootstrap.Modal(document.getElementById("hostEditModal"));
@@ -70,11 +75,16 @@
         };
 
         const response = await fetch($page.url.pathname, { method: "POST", body: JSON.stringify(hostForApi) });
-        await response.json();
 
-        //get an updated list of hosts
-        showHideModal(false);
-        await getHosts();
+        //if the call was 200
+        if (response.ok) {
+            //get an updated list of hosts
+            showHideModal(false);
+            await getHosts();
+            modalValidation = null;
+        } else {
+            modalValidation = await response.json();
+        }
     }
 
     //delete a host from db
@@ -93,6 +103,10 @@
             position: absolute;
             right: 20px;
             bottom: 20px;
+        }
+
+        .form-validation-message {
+            color: red;
         }
     </style>
 </svelte:head>
@@ -139,22 +153,26 @@
                 <form>
                     <div class="mb-3">
                         <label for="inputHostname" class="form-label">Hostname</label>
-                        <input bind:value={modalHostVal} type="text" class="form-control" id="inputHostname" />
+                        <input bind:value={modalHostVal} type="text" required class="form-control" id="inputHostname" />
+                        <label for="inputHostname" class="form-label form-validation-message">{modalValidation?.hostname}</label>
                     </div>
                     <div class="mb-3">
                         <label for="inputIpAddress" class="form-label">IP Address</label>
-                        <input bind:value={modalIpVal} type="text" class="form-control" id="inputIpAddress" />
+                        <input bind:value={modalIpVal} type="text" required class="form-control" id="inputIpAddress" />
+                        <label for="inputHostname" class="form-label form-validation-message">{modalValidation?.ipAddress}</label>
                     </div>
                     <div class="mb-3">
                         <label for="inputCustomerCode" class="form-label">Customer Code</label>
-                        <input bind:value={modalCustomerCodeVal} type="text" class="form-control" id="inputCustomerCode" />
+                        <input bind:value={modalCustomerCodeVal} type="text" required class="form-control" id="inputCustomerCode" />
+                        <label for="inputHostname" class="form-label form-validation-message">{modalValidation?.customerCode}</label>
                     </div>
+                    <p class="form-label form-validation-message">{modalValidation?.generalError}</p>
                 </form>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                 <button
-                    type="button"
+                    type="submit"
                     class="btn btn-primary"
                     onclick={() => {
                         saveHostValues(null);

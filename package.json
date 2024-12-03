@@ -21,9 +21,11 @@
 		"vite": "^5.0.3"
 	},
 	"dependencies": {
+		"@network-utils/tcp-ping": "^1.2.3",
 		"@types/bootstrap": "^5.2.10",
 		"bootstrap": "^5.3.3",
 		"ini": "^5.0.0",
+		"is-ip": "^5.0.1",
 		"sqlite3": "^5.1.7"
 	}
 }

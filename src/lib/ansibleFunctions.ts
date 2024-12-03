@@ -16,11 +16,15 @@ export const addUpdateHostInventory = async (oldHost: Host, newHost: Host) => {
     let text = fs.readFileSync(ANSIBLE_INVENTORY_FILE).toString();
     const config = parse(text);
 
-    let stanzaName = oldHost.customerCode + '_' + oldHost.hostname;
-    let newStanzaName = newHost.customerCode + '_' + newHost.hostname;
+    let stanzaName: string = null;
+
+    if (oldHost !== null)
+        stanzaName = oldHost.ansibleName;
+
+    let newStanzaName = newHost.ansibleName;
 
     //check if there is no existing stanza
-    if (config[stanzaName]) {
+    if (stanzaName !== null && config[stanzaName]) {
         //if there isnt, then make a blank one
         delete config[stanzaName];
     }
