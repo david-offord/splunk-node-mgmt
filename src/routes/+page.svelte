@@ -1,7 +1,8 @@
 <script lang="ts">
     import type { Host } from "$lib/types";
     import type { PageServerData } from "./$types";
-    import type { Modal } from "$lib/bs5/bootstrap.bundle.min.js";
+    import type { Modal } from "bootstrap";
+    import type * as bootstrap from "bootstrap";
     import { page } from "$app/stores";
 
     //get the modal instance
