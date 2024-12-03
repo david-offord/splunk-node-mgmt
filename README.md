@@ -1,4 +1,4 @@
-This is an application to manage multiple Splunk instances for adding apps.
+This is an application to manage multiple Splunk instances. Plans for managing apps like the deployment server, to running ansible playbooks on hosts.
 
 
 TODO:
@@ -18,3 +18,5 @@ TODO:
     ❌ ADD LOGIC FOR SERVER CLASSES
 
     ❌ ADD LOGIC FOR ADD-ONS
+
+    ❌ ADD PAGE FOR RUNNING ANSIBLE PLAYBOOKS

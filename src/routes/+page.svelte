@@ -151,20 +151,34 @@
             </div>
             <div class="modal-body">
                 <form>
-                    <div class="mb-3">
+                    <div class="">
                         <label for="inputHostname" class="form-label">Hostname</label>
                         <input bind:value={modalHostVal} type="text" required class="form-control" id="inputHostname" />
-                        <label for="inputHostname" class="form-label form-validation-message">{modalValidation?.hostname}</label>
+                        <label for="inputHostname" class="form-label form-validation-message {modalValidation?.hostname == null ? 'd-none' : ''}">{modalValidation?.hostname}</label>
                     </div>
-                    <div class="mb-3">
+                    <div class="mt-2">
                         <label for="inputIpAddress" class="form-label">IP Address</label>
                         <input bind:value={modalIpVal} type="text" required class="form-control" id="inputIpAddress" />
-                        <label for="inputHostname" class="form-label form-validation-message">{modalValidation?.ipAddress}</label>
+                        <label for="inputHostname" class="form-label form-validation-message {modalValidation?.ipAddress == null ? 'd-none' : ''}">{modalValidation?.ipAddress}</label>
                     </div>
-                    <div class="mb-3">
+                    <div class="mt-2">
                         <label for="inputCustomerCode" class="form-label">Customer Code</label>
                         <input bind:value={modalCustomerCodeVal} type="text" required class="form-control" id="inputCustomerCode" />
-                        <label for="inputHostname" class="form-label form-validation-message">{modalValidation?.customerCode}</label>
+                        <label for="inputHostname" class="form-label form-validation-message {modalValidation?.customerCode == null ? 'd-none' : ''}">{modalValidation?.customerCode}</label>
+                    </div>
+                    <div class="mt-2">
+                        <label for="inputCustomerCode" class="form-label">Linux Username</label>
+                        <input type="text" required class="form-control" />
+                    </div>
+                    <div class="mt-2">
+                        <label for="inputCustomerCode" class="form-label">Linux Password</label>
+                        <input type="text" class="form-control" aria-describedby="linuxPasswordHelpBlock" />
+                        <div id="linuxPasswordHelpBlock" class="form-text">Leave empty to keep current value.</div>
+                    </div>
+                    <div class="mt-2">
+                        <label for="inputCustomerCode" class="form-label">Splunk Password</label>
+                        <input type="text" class="form-control" aria-describedby="splunkPasswordHelpBlock" />
+                        <div id="splunkPasswordHelpBlock" class="form-text">Leave empty to keep current value.</div>
                     </div>
                     <p class="form-label form-validation-message">{modalValidation?.generalError}</p>
                 </form>
