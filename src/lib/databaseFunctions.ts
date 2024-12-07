@@ -112,18 +112,24 @@ const loadDb = async () => {
 const insertNewHost = async (host: Host) => {
     const loadDataPromise = new Promise<number>((resolve, reject) => {
         const stmt = db.prepare(`INSERT INTO Hosts 
-        ( customerCode, ipAddress, hostname, ansibleName)
+        ( customerCode, ipAddress, hostname, ansibleName, linuxUsername, splunkHomePath)
         VALUES
-        (?, ?, ?, ?)
+        (?, ?, ?, ?, ?, ?)
         `);
 
-        stmt.run(host.customerCode, host.ipAddress, host.hostname, host.customerCode + '_' + host.hostname.replaceAll('-', '_'), function (this: RunResult, err: Error | null) {
-            if (err) {
-                reject(err);
-                return;
-            }
-            resolve(this.lastID);
-        });
+        stmt.run(host.customerCode,
+            host.ipAddress,
+            host.hostname,
+            host.customerCode + '_' + host.hostname.replaceAll('-', '_').replaceAll(' ', '_'),
+            host.linuxUsername,
+            host.splunkHomePath,
+            function (this: RunResult, err: Error | null) {
+                if (err) {
+                    reject(err);
+                    return;
+                }
+                resolve(this.lastID);
+            });
     });
 
     //check how many rows came back
@@ -135,17 +141,24 @@ const insertNewHost = async (host: Host) => {
 const updateExistingHost = async (host: Host) => {
     const loadDataPromise = new Promise<Host[]>((resolve, reject) => {
         const stmt = db.prepare(`UPDATE Hosts 
-        SET customerCode=?, ipAddress=?, hostname=?, ansibleName=?
+        SET customerCode=?, ipAddress=?, hostname=?, ansibleName=?, linuxUsername=?, splunkHomePath=?
         WHERE id=?;
         `);
 
-        stmt.run(host.customerCode, host.ipAddress, host.hostname, host.customerCode + '_' + host.hostname.replaceAll('-', '_'), host.id, (err: Error | null, rows: Host[]) => {
-            if (err) {
-                reject(err);
-                return;
-            }
-            resolve(rows)
-        });
+        stmt.run(host.customerCode,
+            host.ipAddress,
+            host.hostname,
+            host.customerCode + '_' + host.hostname.replaceAll('-', '_').replaceAll(' ', '_'),
+            host.linuxUsername,
+            host.splunkHomePath,
+            host.id,
+            (err: Error | null, rows: Host[]) => {
+                if (err) {
+                    reject(err);
+                    return;
+                }
+                resolve(rows)
+            });
 
     });
 
