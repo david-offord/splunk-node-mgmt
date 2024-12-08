@@ -12,15 +12,25 @@ export interface ValidationObject {
 
 export interface Host {
     id: number,
-    hostname: string,
-    ipAddress: string,
-    customerCode: string,
-    splunkHomePath: string
+    hostname?: string,
+    ipAddress?: string,
+    customerCode?: string,
+    splunkHomePath?: string
     linuxUsername?: string,
     linuxPassword?: string,
     splunkPassword?: string,
-    ansibleName?: string | null
+    ansibleName?: string | null,
+}
 
+export interface HostJoinServerClass extends Host {
+    serverClassId: number
+}
+
+export interface ServerClasses {
+    id: number,
+    name: string,
+    hostsAssigned?: Array<Host>,
+    addonsAssigned?: Array<number>,
 }
 
 export interface AnsibleVariableFile {

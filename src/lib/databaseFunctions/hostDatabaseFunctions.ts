@@ -25,6 +25,25 @@ export const getAllHosts = async () => {
     return rows;
 };
 
+
+//gets a list of every host
+export const getAllHostsOnlyNamesAndIds = async () => {
+    const loadDataPromise = new Promise<Host[]>((resolve, reject) => {
+        const query = "SELECT id,hostname FROM Hosts;";
+
+        db.all<Host>(query, (err: Error | null, rows: Host[]) => {
+            if (err) {
+                reject(err);
+                return;
+            }
+            resolve(rows)
+        })
+    });
+    const rows = await loadDataPromise;
+
+    return rows;
+};
+
 //Get a single host based on ID. Returns null if no host is found
 export const getSingleHost = async (hostId: number) => {
     const loadDataPromise = new Promise<Host[]>((resolve, reject) => {

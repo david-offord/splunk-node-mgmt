@@ -44,6 +44,7 @@
             hostModal.hide();
         }
     }
+
     //set listeners
     function setModalValues(hostId: number) {
         //get host
