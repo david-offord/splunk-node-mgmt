@@ -9,6 +9,7 @@
     //get the hosts from the db
     let { data, form }: { data: PageServerData; form: FormData } = $props();
     let hosts = $state(data.hosts);
+    let visibleHosts = $state(data.hosts);
 
     //get the modal instance
     let hostModal: Modal = null;
@@ -25,12 +26,17 @@
     let modalSplunkPasswordVal: string = $state("");
     let modalSplunkHomePathVal: string = $state("");
     let newHost = false;
+    let searchString: string = $state("");
 
     //DEFAULT VALUES
     let defaultSplunkHome = "/opt/splunk";
 
     //used for validation later
     let modalValidation: ValidationObject = $state();
+
+    function searchHosts() {
+        visibleHosts = hosts.filter((x) => x.hostname.toLocaleLowerCase().includes(searchString.toLocaleLowerCase()));
+    }
 
     //toggle modal
     function showHideModal(show: boolean) {
@@ -81,6 +87,7 @@
     async function getHosts() {
         const response = await fetch($page.url.pathname, { method: "GET" });
         hosts = await response.json();
+        searchHosts();
     }
 
     //call an api
@@ -134,34 +141,51 @@
     </style>
 </svelte:head>
 
-<div class="container">
-    <table class="table">
-        <thead>
-            <tr>
-                <th>Hostname</th>
-                <th>Ip Address</th>
-                <th>Customer Code</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            {#each hosts as host}
-                <tr>
-                    <th>{host.hostname}</th>
-                    <th>{host.ipAddress}</th>
-                    <th>{host.customerCode}</th>
-                    <th>
-                        <button aria-label="Edit Host" onclick={() => setModalValues(host.id)}>
-                            <i class="bi bi-pencil"></i>
-                        </button>
-                        <button aria-label="Delete Host" onclick={() => deleteHost(host)}>
-                            <i class="bi bi-trash"></i>
-                        </button>
-                    </th>
-                </tr>
-            {/each}
-        </tbody>
-    </table>
+<div class="container mt-2">
+    <div class="row">
+        <div class="col-12">
+            <div class="float-end">
+                <label for="searchTextBox" class="col-form-label">Search:</label>
+                <input
+                    id="searchTextBox"
+                    class="form-control"
+                    bind:value={searchString}
+                    oninput={() => {
+                        searchHosts();
+                    }}
+                />
+            </div>
+        </div>
+        <div class="col-12">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Hostname</th>
+                        <th>Ip Address</th>
+                        <th>Customer Code</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {#each visibleHosts as host}
+                        <tr>
+                            <td>{host.hostname}</td>
+                            <td>{host.ipAddress}</td>
+                            <td>{host.customerCode}</td>
+                            <td>
+                                <button aria-label="Edit Host" onclick={() => setModalValues(host.id)}>
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                                <button aria-label="Delete Host" onclick={() => deleteHost(host)}>
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    {/each}
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>
 
 <!--Edit modal-->

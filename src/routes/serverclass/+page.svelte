@@ -5,6 +5,7 @@
     import type * as bootstrap from "bootstrap";
     import { page } from "$app/stores";
     import { redirect } from "@sveltejs/kit";
+    import type { Server } from "http";
 
     //get the hosts from the db
     let { data, form }: { data: PageServerData; form: FormData } = $props();
@@ -15,22 +16,23 @@
 
     //get the modal instance
     let hostModal: Modal = null;
+    let newServerClassModal: Modal = null;
+    let deleteServerClassModal: Modal = null;
 
     //current editing server class
     let currentEditingServerClass: ServerClasses = null;
+    let deleteServerClassObject: ServerClasses = $state();
 
     //basic variables for display on webpage
     let editTitle: string = $state("");
+    let newServerClassInput: string = $state("");
 
     //get all server classes
     async function loadServerClasses() {
         const response = await fetch($page.url.pathname, { method: "GET" });
 
-        console.log(response);
-
         //load the server classes
         serverClasses = await response.json();
-        console.log(serverClasses);
     }
 
     //toggle modal
@@ -46,8 +48,38 @@
         }
     }
 
+    //toggle modal
+    function showHideNewModal(show: boolean) {
+        if (newServerClassModal == null) {
+            newServerClassModal = new bootstrap.Modal(document.getElementById("newServerClassModal"));
+        }
+
+        if (show) {
+            newServerClassModal.show();
+        } else {
+            newServerClassModal.hide();
+        }
+    }
+
+    //toggle modal
+    function showHideDeleteModal(show: boolean, serverClass: ServerClasses) {
+        deleteServerClassObject = serverClass;
+
+        if (deleteServerClassModal == null) {
+            deleteServerClassModal = new bootstrap.Modal(document.getElementById("deleteServerClassModal"));
+        }
+
+        if (show) {
+            deleteServerClassModal.show();
+        } else {
+            deleteServerClassModal.hide();
+        }
+    }
+
+    //Show new server class simple modal
     function showModalHostNewServerClass() {
-        showHideModal(true);
+        newServerClassInput = "";
+        showHideNewModal(true);
     }
 
     //open modal with existing server class
@@ -56,6 +88,7 @@
         selectedHosts = [];
         unselectedHosts = [];
 
+        //save the class we're currrently editing for save later
         currentEditingServerClass = serverClass;
 
         //filter out the elements in the full list into the 2 arrays
@@ -98,6 +131,28 @@
 
         await loadServerClasses();
         showHideModal(false);
+    }
+
+    async function saveNewServerClass() {
+        //send the request
+        const response = await fetch($page.url.pathname, {
+            method: "POST",
+            body: JSON.stringify(newServerClassInput),
+        });
+
+        await loadServerClasses();
+        showHideNewModal(false);
+    }
+
+    async function deleteServerClass(serverClass: ServerClasses) {
+        //send the request
+        const response = await fetch($page.url.pathname, {
+            method: "DELETE",
+            body: JSON.stringify(serverClass),
+        });
+
+        await loadServerClasses();
+        showHideDeleteModal(false, null);
     }
 
     //unselect a option in the selected select box
@@ -196,18 +251,16 @@
                 <th>Name</th>
                 <th>Number of Hosts Assigned</th>
                 <th>Add-ons Assigned</th>
+                <th>Actions</th>
             </tr>
         </thead>
         <tbody>
             {#each serverClasses as serverclass}
                 <tr>
-                    <th>
+                    <td>
                         {serverclass.name}
-                        <button class="ms-3" aria-label="Delete Host">
-                            <i class="bi bi-trash"></i>
-                        </button>
-                    </th>
-                    <th>
+                    </td>
+                    <td>
                         {serverclass.hostsAssigned.length}
                         <button
                             class="ms-3"
@@ -218,13 +271,27 @@
                         >
                             <i class="bi bi-pencil"></i>
                         </button>
-                    </th>
-                    <th>
+                    </td>
+                    <td>
                         2
                         <button class="ms-3" aria-label="Edit Assigned Hosts">
                             <i class="bi bi-pencil"></i>
                         </button>
-                    </th>
+                    </td>
+                    <td>
+                        <button class="ms-1" aria-label="Refresh Hosts">
+                            <i class="bi bi-arrow-counterclockwise"></i>
+                        </button>
+                        <button
+                            class="ms-3"
+                            onclick={() => {
+                                showHideDeleteModal(true, serverclass);
+                            }}
+                            aria-label="Delete Host"
+                        >
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </td>
                 </tr>
             {/each}
         </tbody>
@@ -281,6 +348,68 @@
                         saveModalChanges();
                     }}>Save changes</button
                 >
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="newServerClassModal" tabindex="-1" aria-labelledby="newServerClassModal" aria-hidden="true">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="exampleModalLabel">Create Server Class</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form>
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="mb-3">
+                                <label for="newServerClassName" class="form-label">Server Class Name</label>
+                                <input bind:value={newServerClassInput} class="form-control" id="newServerClassName" />
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button
+                    type="submit"
+                    class="btn btn-primary"
+                    onclick={() => {
+                        saveNewServerClass();
+                    }}>Save New Server Class</button
+                >
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="deleteServerClassModal" tabindex="-1" aria-labelledby="deleteServerClassModal" aria-hidden="true">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="exampleModalLabel">Confirm Deletion of {deleteServerClassObject?.name}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form>
+                    <div class="row">
+                        <div class="col-6">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        </div>
+                        <div class="col-6">
+                            <button
+                                type="submit"
+                                class="btn btn-danger"
+                                onclick={() => {
+                                    deleteServerClass(deleteServerClassObject);
+                                }}>Confirm</button
+                            >
+                        </div>
+                    </div>
+                </form>
             </div>
         </div>
     </div>

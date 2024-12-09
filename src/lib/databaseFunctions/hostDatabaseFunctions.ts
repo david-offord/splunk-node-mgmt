@@ -95,7 +95,20 @@ export const addUpdateHost = async (updateHost: Host) => {
 }
 
 export const deleteSingleHost = async (hostId: number) => {
-    const loadDataPromise = new Promise<Host[]>((resolve, reject) => {
+    let loadDataPromise = new Promise<Host[]>((resolve, reject) => {
+        const query = `DELETE FROM serverClassByHost WHERE hostId=${hostId};`;
+
+        db.all<Host>(query, (err: Error | null, rows: Host[]) => {
+            if (err) {
+                reject(err);
+                return;
+            }
+            resolve(rows)
+        })
+    });
+    await loadDataPromise;
+
+    loadDataPromise = new Promise<Host[]>((resolve, reject) => {
         const query = `DELETE FROM Hosts WHERE id=${hostId};`;
 
         db.all<Host>(query, (err: Error | null, rows: Host[]) => {
@@ -106,6 +119,11 @@ export const deleteSingleHost = async (hostId: number) => {
             resolve(rows)
         })
     });
+
+    await loadDataPromise;
+
+
+
     return true;
 }
 

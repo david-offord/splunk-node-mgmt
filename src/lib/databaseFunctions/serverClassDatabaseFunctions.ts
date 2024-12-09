@@ -45,6 +45,29 @@ export const getAllServerClassesByHosts = async () => {
     return rows;
 }
 
+
+export const createServerClass = async (serverClassName: string) => {
+    //so first of all, delete all the existing entries for serverclass -> host
+    let loadDataPromise = new Promise<number>((resolve, reject) => {
+        const stmt = db.prepare(`INSERT INTO ServerClasses 
+        (name)
+        VALUES
+        (?);`);
+
+        stmt.run(serverClassName, function (this: RunResult, err: Error | null) {
+            if (err) {
+                reject(err);
+                return;
+            }
+            resolve(this.lastID);
+        });
+    });
+
+    //await the delete
+    let newId = await loadDataPromise;
+    return newId;
+}
+
 export const updateServerClassHosts = async (serverClass: ServerClasses) => {
     //so first of all, delete all the existing entries for serverclass -> host
     let loadDataPromise = new Promise<void>((resolve, reject) => {
@@ -92,6 +115,44 @@ export const updateServerClassHosts = async (serverClass: ServerClasses) => {
     console.log('aaaa');
 }
 
+
+export const deleteServerClass = async (serverClass: ServerClasses) => {
+    //so first of all, delete all the existing entries for serverclass -> host
+    let sqlPromise = new Promise<void>((resolve, reject) => {
+        const stmt = db.prepare(`DELETE FROM serverClassByHost 
+        WHERE serverClassId = ?;`);
+
+        stmt.run(serverClass.id, (err: Error | null) => {
+            if (err) {
+                reject();
+                return;
+            }
+            resolve()
+        });
+    });
+
+    //await the delete
+    await sqlPromise;
+
+
+
+    //delete from the serverclass table
+    sqlPromise = new Promise<void>((resolve, reject) => {
+        const stmt = db.prepare(`DELETE FROM ServerClasses 
+        WHERE id = ?;`);
+
+        stmt.run(serverClass.id, (err: Error | null) => {
+            if (err) {
+                reject();
+                return;
+            }
+            resolve()
+        });
+    });
+
+    //await the delete
+    await sqlPromise;
+}
 
 //***************************************
 //BEGIN PRIVATE FUNCTIONS

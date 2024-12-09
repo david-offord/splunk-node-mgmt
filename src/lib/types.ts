@@ -33,6 +33,17 @@ export interface ServerClasses {
     addonsAssigned?: Array<number>,
 }
 
+export interface AddOn {
+    id: number,
+    displayName: string,
+    addonFileLocation: string,
+    addonIgnoreFileOption?: string,
+    actionOnInstallation?: string,
+}
+
+
+
+
 export interface AnsibleVariableFile {
     ansible_user: string,
     ansible_password: string,

@@ -21,6 +21,12 @@
                 <li class="nav-item">
                     <a class="nav-link active" aria-current="page" href="/hello">Add-on Manager</a>
                 </li>
+                <li class="nav-item">
+                    <a class="nav-link active" aria-current="page" href="/hello">Playbook Manager</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link active" aria-current="page" href="/hello">Run Playbooks</a>
+                </li>
             </ul>
         </div>
     </div>

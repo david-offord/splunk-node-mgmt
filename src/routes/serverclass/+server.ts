@@ -4,10 +4,7 @@ import type { RequestHandler } from './$types';
 import * as hdf from '$lib/databaseFunctions/hostDatabaseFunctions.js';
 import * as scdf from '$lib/databaseFunctions/serverClassDatabaseFunctions';
 
-import * as net from 'net';
-import { ok } from 'assert';
-
-//for updating/adding host
+//for updating/adding server classes
 export const GET: RequestHandler = async function GET({ request }) {
     let serverClasses = await scdf.getAllServerClasses();
 
@@ -37,7 +34,15 @@ export const GET: RequestHandler = async function GET({ request }) {
 
 }
 
-//for updating/adding host
+//create new server class
+export const POST: RequestHandler = async function POST({ request }) {
+    let newsc = await request.json();
+
+    let newId = await scdf.createServerClass(newsc);
+    return json(newId);
+}
+
+//for updating serverclass
 export const PATCH: RequestHandler = async function PATH({ request }) {
     //get the serverclass and other info from the request
     let apiData = await request.json();
@@ -63,4 +68,9 @@ export const PATCH: RequestHandler = async function PATH({ request }) {
     return json(true);
 }
 
-
+//deleting server class
+export const DELETE: RequestHandler = async function DELETE({ request }) {
+    let sc: ServerClasses = await request.json();
+    await scdf.deleteServerClass(sc);
+    return json(true);
+}
