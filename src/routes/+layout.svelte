@@ -4,7 +4,7 @@
 
 <nav class="navbar navbar-expand-lg navbar-light bg-light">
     <div class="container-fluid">
-        <a class="navbar-brand" href="#">Splunk Node Manager</a>
+        <a class="navbar-brand" href="/">Splunk Node Manager</a>
 
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
@@ -19,7 +19,7 @@
                     <a class="nav-link active" aria-current="page" href="/serverclass">Server Classes</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link active" aria-current="page" href="/hello">Add-on Manager</a>
+                    <a class="nav-link active" aria-current="page" href="/addons">Add-on Manager</a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link active" aria-current="page" href="/hello">Playbook Manager</a>

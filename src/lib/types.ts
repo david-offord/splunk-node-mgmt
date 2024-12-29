@@ -26,6 +26,15 @@ export interface HostJoinServerClass extends Host {
     serverClassId: number
 }
 
+
+export interface ServerClassJoinAddon extends ServerClasses {
+    addonId: number
+}
+
+export interface AddonJoinServerClass extends AddOn {
+    serverClassId: number
+}
+
 export interface ServerClasses {
     id: number,
     name: string,
@@ -36,9 +45,11 @@ export interface ServerClasses {
 export interface AddOn {
     id: number,
     displayName: string,
-    addonFileLocation: string,
+    addonFileLocation?: string,
     addonIgnoreFileOption?: string,
     actionOnInstallation?: string,
+    serverClassesAssigned?: Array<number>,
+    appFolderName?: string
 }
 
 
