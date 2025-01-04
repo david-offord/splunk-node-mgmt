@@ -7,7 +7,15 @@ export interface ValidationObject {
     linuxPassword?: string,
     splunkPassword?: string,
     splunkHomePath?: string,
-    ansibleName?: string | null
+    ansibleName?: string | null,
+
+}
+
+export interface AddonValidationObject {
+    addonName?: string,
+    ignoredFiles?: string,
+    actionOnInstallation?: string,
+    addOnFileError?: string,
 }
 
 export interface Host {

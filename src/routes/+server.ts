@@ -2,7 +2,7 @@ import { fail, json } from '@sveltejs/kit';
 import type { Host, ValidationObject } from "$lib/types.ts"
 import type { RequestHandler } from './$types';
 import * as df from '$lib/databaseFunctions/hostDatabaseFunctions.js' //example of importing a bunch of functions
-import * as af from '$lib/ansibleFunctions.js' //example of importing a bunch of functions
+import * as af from '$lib/workingDirectoryFunctions/ansibleFunctions.js' //example of importing a bunch of functions
 import * as isIp from 'is-ip';
 import * as net from 'net';
 

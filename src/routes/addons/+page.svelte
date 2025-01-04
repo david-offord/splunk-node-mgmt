@@ -1,15 +1,13 @@
 <script lang="ts">
-    import type { Host, ServerClasses, AddOn, ValidationObject, AddonJoinServerClass, ServerClassJoinAddon } from "$lib/types";
+    import type { ServerClasses, AddOn, ServerClassJoinAddon, AddonValidationObject } from "$lib/types";
     import type { PageServerData } from "./$types";
     import type { Modal } from "bootstrap";
     import type * as bootstrap from "bootstrap";
     import { page } from "$app/stores";
-    import { redirect } from "@sveltejs/kit";
-    import type { Server } from "http";
     import { onMount } from "svelte";
 
     //get the hosts from the db
-    let { data, form }: { data: PageServerData; form: FormData } = $props();
+    let { data }: { data: PageServerData; form: FormData } = $props();
     let addOns = $state(data.addons);
     let possibleServerClasses = $state(data.serverClasses);
 
@@ -33,6 +31,9 @@
     let modalAddonDisplayName = $state("");
     let modalAddOnIgnoredPaths = $state("");
     let modalAddonAction = $state("");
+
+    //used for validation later
+    let modalValidation: AddonValidationObject = $state();
 
     //get all server classes
     async function loadAddons() {
@@ -170,8 +171,12 @@
             body: formData,
         });
 
-        await loadAddons();
-        showHideModal(false);
+        if (response.ok) {
+            await loadAddons();
+            showHideModal(false);
+        } else {
+            modalValidation = await response.json();
+        }
     }
 
     async function deleteAddon(addon: AddOn) {
@@ -286,7 +291,7 @@
         <thead>
             <tr>
                 <th>Name</th>
-                <th>Folder Name</th>
+                <th>File Name</th>
                 <th># Server Classes Including This</th>
                 <th>Actions</th>
             </tr>
@@ -337,16 +342,20 @@
                         <div class="col-sm-12 col-lg-6">
                             <label for="inputAddonName" class="form-label">Add-on Name</label>
                             <input bind:value={modalAddonDisplayName} type="text" required class="form-control" id="inputAddonName" />
+                            <label for="inputAddonName" class="form-label form-validation-message {modalValidation == null ? 'd-none' : ''}">{modalValidation?.addonName}</label>
                         </div>
                         <div class="col-sm-12 col-lg-6">
                             <label for="inputAddonFile" class="form-label">Add-on File (Do not upload to retain current)</label>
-                            <input type="file" required class="form-control" id="inputAddonFile" />
+                            <input type="file" accept=".tar.gz .tar .spl .gz" required class="form-control" id="inputAddonFile" />
+                            <label for="" class="form-label">{currentEditingAddon == null ? "" : "Current File: " + currentEditingAddon?.addonFileLocation}</label>
+                            <label for="inputAddonFile" class="form-label form-validation-message {modalValidation == null ? 'd-none' : ''}">{modalValidation?.addOnFileError}</label>
                         </div>
                     </div>
                     <div class="row">
                         <div class="col-sm-12 col-lg-6">
                             <label for="inputIgnoredFiles" class="form-label">Ignored Files/Paths</label>
                             <input bind:value={modalAddOnIgnoredPaths} type="text" required class="form-control" id="inputIgnoredFiles" />
+                            <label for="inputIgnoredFiles" class="form-label form-validation-message {modalValidation == null ? 'd-none' : ''}">{modalValidation?.ignoredFiles}</label>
                         </div>
                         <div class="col-sm-12 col-lg-6">
                             <label for="inputActionOnInstallation" class="form-label">Action on Installation</label>
@@ -355,6 +364,7 @@
                                 <option value="debugrefresh">Debug Refresh</option>
                                 <option value="restart">Restart</option>
                             </select>
+                            <label for="inputActionOnInstallation" class="form-label form-validation-message {modalValidation == null ? 'd-none' : ''}">{modalValidation?.actionOnInstallation}</label>
                         </div>
                     </div>
                     <div class="row mt-3">

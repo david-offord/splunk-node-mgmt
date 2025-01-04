@@ -249,7 +249,11 @@ const updateExistingAddon = async (addon: AddOn) => {
     //do the actual update
     const insertPromise = new Promise<number>((resolve, reject) => {
         const stmt = db.prepare(`UPDATE addons
-        SET displayName = ?, addonFileLocation = ?, addonIgnoreFileOption = ?, actionOnInstallation = ?
+        SET 
+        displayName = ?,
+        addonFileLocation = ?,
+        addonIgnoreFileOption = ?,
+        actionOnInstallation = ?
         WHERE id = ?
         `);
 
@@ -266,5 +270,7 @@ const updateExistingAddon = async (addon: AddOn) => {
                 resolve(this.lastID);
             });
     });
+
+    await insertPromise;
 
 }
