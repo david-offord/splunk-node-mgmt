@@ -1,10 +1,11 @@
 <script lang="ts">
     import type { Host, ValidationObject } from "$lib/types";
+    import { DEPLOY_ADDON_AD_HOC_ROUTE } from "$lib/constants";
     import type { PageServerData } from "./$types";
     import type { Modal } from "bootstrap";
     import type * as bootstrap from "bootstrap";
     import { page } from "$app/stores";
-    import { redirect } from "@sveltejs/kit";
+    import { onMount } from "svelte";
 
     //get the hosts from the db
     let { data, form }: { data: PageServerData; form: FormData } = $props();
@@ -123,6 +124,18 @@
         await response.json();
         await getHosts();
     }
+
+    async function redeployAddOns(selectedHost: Host) {
+        const response = await fetch(DEPLOY_ADDON_AD_HOC_ROUTE, { method: "POST", body: JSON.stringify(selectedHost) });
+        await response.json();
+    }
+
+    //Add all listeners
+    onMount(() => {
+        const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+        // @ts-ignore
+        const tooltipList = [...tooltipTriggerList].map((tooltipTriggerEl) => new bootstrap.Tooltip(tooltipTriggerEl));
+    });
 </script>
 
 <svelte:head>
@@ -145,7 +158,7 @@
     <div class="row">
         <div class="col-12">
             <div class="float-end">
-                <label for="searchTextBox" class="col-form-label">Search:</label>
+                <label for="searchTextBox" class="col-form-label mat-green">Search:</label>
                 <input
                     id="searchTextBox"
                     class="form-control"
@@ -173,10 +186,13 @@
                             <td>{host.ipAddress}</td>
                             <td>{host.customerCode}</td>
                             <td>
-                                <button aria-label="Edit Host" onclick={() => setModalValues(host.id)}>
+                                <button aria-label="Edit Host" data-bs-toggle="tooltip" data-placement="top" title="Edit Host" onclick={() => setModalValues(host.id)}>
                                     <i class="bi bi-pencil"></i>
                                 </button>
-                                <button aria-label="Delete Host" onclick={() => deleteHost(host)}>
+                                <button aria-label="Redeploy Add-ons" data-bs-toggle="tooltip" data-placement="top" title="Redeploy Add-ons" onclick={() => redeployAddOns(host)}>
+                                    <i class="bi bi-arrow-up-right"></i>
+                                </button>
+                                <button aria-label="Delete Host" data-bs-toggle="tooltip" data-placement="top" title="Delete Host" onclick={() => deleteHost(host)}>
                                     <i class="bi bi-trash"></i>
                                 </button>
                             </td>

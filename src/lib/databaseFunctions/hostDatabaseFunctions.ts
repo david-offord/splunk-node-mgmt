@@ -1,4 +1,4 @@
-import type { Host } from "$lib/types.ts"
+import type { AddOn, Host } from "$lib/types.ts"
 import sqlite3 from 'sqlite3';
 import type { Database, Statement, RunResult } from 'sqlite3'
 import db from '$lib/server/db';
@@ -127,6 +127,27 @@ export const deleteSingleHost = async (hostId: number) => {
     return true;
 }
 
+export const getAllAddonsForHost = async (hostId: number) => {
+    const loadDataPromise = new Promise<AddOn[]>((resolve, reject) => {
+        const query = ` SELECT a.*
+                        FROM serverClassByHost scbh
+                        JOIN serverClassByAddon scba ON scbh.serverClassId = scba.serverClassId
+                        JOIN addons a on scba.addonId = a.id
+                        WHERE scbh.hostid = '${hostId}';`;
+
+        db.all<AddOn>(query, (err: Error | null, rows: AddOn[]) => {
+            if (err) {
+                reject(err);
+                return;
+            }
+            resolve(rows)
+        })
+    });
+    const rows = await loadDataPromise;
+
+    return rows;
+}
+
 
 //***************************************
 //BEGIN PRIVATE FUNCTIONS
@@ -157,7 +178,7 @@ const insertNewHost = async (host: Host) => {
         stmt.run(host.customerCode,
             host.ipAddress,
             host.hostname,
-            host.customerCode + '_' + host.hostname.replaceAll('-', '_').replaceAll(' ', '_'),
+            host.hostname.replaceAll('-', '_').replaceAll(' ', '_') + '_' + host.customerCode,
             host.linuxUsername,
             host.splunkHomePath,
             function (this: RunResult, err: Error | null) {
@@ -185,7 +206,7 @@ const updateExistingHost = async (host: Host) => {
         stmt.run(host.customerCode,
             host.ipAddress,
             host.hostname,
-            host.customerCode + '_' + host.hostname.replaceAll('-', '_').replaceAll(' ', '_'),
+            host.hostname.replaceAll('-', '_').replaceAll(' ', '_') + '_' + host.customerCode,
             host.linuxUsername,
             host.splunkHomePath,
             host.id,

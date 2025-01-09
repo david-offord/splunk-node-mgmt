@@ -6,6 +6,7 @@ import { FileSaveResults } from "$lib/enums"
 import * as scdf from '$lib/databaseFunctions/serverClassDatabaseFunctions';
 import * as aodf from "$lib/databaseFunctions/addonDatabaseFunctions"
 import * as aoff from "$lib/workingDirectoryFunctions/addOnFileFunctions"
+import { isNullOrUndefined } from '$lib/utils';
 
 
 //for getting all addons
@@ -152,11 +153,9 @@ export const PATCH: RequestHandler = async function PATH({ request }) {
     }
 
     //see if we need to update the name
-    if (fileUploadedName) {
+    if (isNullOrUndefined(fileUploadedName) === false) {
         addonPayload.addonFileLocation = fileUploadedName;
-    }
-    //if we dont need to update the name, keep the old one
-    else {
+    } else {
         addonPayload.addonFileLocation = existingAddonDefinition.addonFileLocation;
     }
 
@@ -166,7 +165,7 @@ export const PATCH: RequestHandler = async function PATH({ request }) {
 
 //deleting addon
 export const DELETE: RequestHandler = async function DELETE({ request }) {
-    let sc: ServerClasses = await request.json();
-    await scdf.deleteServerClass(sc);
+    let addon: AddOn = await request.json();
+    await aodf.deleteSingleAddon(addon.id);
     return json(true);
 }

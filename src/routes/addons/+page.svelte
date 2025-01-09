@@ -63,7 +63,7 @@
 
         if (deleteAddonModal == null) {
             //@ts-ignore
-            deleteAddonModal = new bootstrap.Modal(document.getElementById("deleteServerClassModal"));
+            deleteAddonModal = new bootstrap.Modal(document.getElementById("deleteAddonModal"));
         }
 
         if (show) {
@@ -120,7 +120,7 @@
                 }
             }
 
-            editTitle = "Manage Add On " + addOn.displayName;
+            editTitle = 'Manage Add On "' + addOn.displayName + '"';
             newAddon = false;
         }
 
@@ -180,13 +180,13 @@
     }
 
     async function deleteAddon(addon: AddOn) {
-        // //send the request
-        // const response = await fetch($page.url.pathname, {
-        //     method: "DELETE",
-        //     body: JSON.stringify(serverClass),
-        // });
-        // await loadServerClasses();
-        // showHideDeleteModal(false, null);
+        //send the request
+        const response = await fetch($page.url.pathname, {
+            method: "DELETE",
+            body: JSON.stringify(addon),
+        });
+        await loadAddons();
+        showHideDeleteModal(false, null);
     }
 
     //unselect a option in the selected select box
@@ -287,6 +287,7 @@
 </svelte:head>
 
 <div class="container">
+    <h1 class="mat-green">Add-ons</h1>
     <table class="table">
         <thead>
             <tr>
@@ -304,7 +305,7 @@
                     <td> {addon.serverClassesAssigned?.length} </td>
                     <td>
                         <button
-                            class="ms-1"
+                            class="ms-1 table-button"
                             onclick={() => {
                                 showModalAddon(addon);
                             }}
@@ -313,7 +314,7 @@
                             <i class="bi bi-pencil"></i>
                         </button>
                         <button
-                            class="ms-3"
+                            class="ms-3 table-button"
                             onclick={() => {
                                 showHideDeleteModal(true, addon);
                             }}
@@ -346,7 +347,7 @@
                         </div>
                         <div class="col-sm-12 col-lg-6">
                             <label for="inputAddonFile" class="form-label">Add-on File (Do not upload to retain current)</label>
-                            <input type="file" accept=".tar.gz .tar .spl .gz" required class="form-control" id="inputAddonFile" />
+                            <input type="file" accept=".tar.gz,.tar,.spl,.gz" required class="form-control" id="inputAddonFile" />
                             <label for="" class="form-label">{currentEditingAddon == null ? "" : "Current File: " + currentEditingAddon?.addonFileLocation}</label>
                             <label for="inputAddonFile" class="form-label form-validation-message {modalValidation == null ? 'd-none' : ''}">{modalValidation?.addOnFileError}</label>
                         </div>
@@ -422,11 +423,10 @@
 <div class="modal fade" id="deleteAddonModal" tabindex="-1" aria-labelledby="deleteAddonModal" aria-hidden="true">
     <div class="modal-dialog modal-sm">
         <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="exampleModalLabel">Confirm Deletion of {deleteAddonObj?.displayName}</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
             <div class="modal-body">
+                <h5 class="modal-title" id="exampleModalLabel">Confirm Deletion of<br />"{deleteAddonObj?.displayName}"</h5>
+            </div>
+            <div class="modal-footer">
                 <form>
                     <div class="row">
                         <div class="col-6">

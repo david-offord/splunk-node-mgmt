@@ -1,0 +1,33 @@
+body {
+    background-color: black !important;
+
+}
+
+.navbar {
+    background-color: black !important;
+}
+
+.navbar-brand {
+    color: rgb(96, 184, 243) !important;
+}
+
+.nav-link {
+    color: rgb(96, 184, 243) !important;
+}
+
+.table-button {
+    background-color: yellowgreen;
+    border-color: yellowgreen;
+}
+
+td {
+    color: rgb(23, 235, 23) !important;
+}
+
+th {
+    color: rgb(23, 235, 23) !important;
+}
+
+.mat-green {
+    color: rgb(23, 235, 23) !important;
+}
