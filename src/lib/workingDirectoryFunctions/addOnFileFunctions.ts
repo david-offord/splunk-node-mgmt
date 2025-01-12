@@ -1,8 +1,10 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { FileSaveResults } from "$lib/enums"
+import * as utils from '$lib/utils' // Added import for utils library
 
 const ADD_ON_STORAGE_DIRECTORY: string = "workingdirectory/addons/"
+const TEMP_DIRECTORY: string = 'workingdirectory/temp'
 
 /**
  * Saves an add-on to the disk. Won't overwrite if the file already exists, and overwriteIfFound is not true.
@@ -54,13 +56,37 @@ export const saveAddonFromFormData = async (formdata: FormData, fileName: string
  * @param {String} fileName - Name of tar file within the addons folder.
  * @returns 
  */
-export const untarAddOn = async (fileName: string = null) => {
-    let folderName = '';
-    try {
+export const verifyAddOn = async (formdata: FormData) => {
+    //first of all, grab the file itself
+    let fileUploaded: File = formdata.get('file') as File;
+    let tempdir = path.join(TEMP_DIRECTORY, 'addons', new Date().getTime().toString());
 
+    let retVal = {
+        success: true,
+        error: '',
+        extractedFolderName: '' // Changed key from folderName to extractedFolderName
+    };
+
+    //make some working folders in the temp directory
+    fs.mkdirSync(path.join(tempdir, 'extracted'), { recursive: true });
+
+    //write it to disk
+    fs.writeFileSync(path.join(tempdir, fileUploaded.name), Buffer.from(await fileUploaded.arrayBuffer()));
+
+    //extract it out
+    await utils.callCliFunction(`tar -xvf ${path.join('..', fileUploaded.name)}`, `${path.join(tempdir, 'extracted')}`);
+
+    //check if its a single directory
+    let files = fs.readdirSync(path.join(tempdir, 'extracted'));
+    if (files.length !== 1 || fs.statSync(path.join(tempdir, 'extracted', files[0])).isDirectory() === false) {
+        retVal.error = 'Tar file must contain a single directory.';
+        retVal.success = false;
     }
-    catch (ex: any) {
-        console.error(ex);
+    else {
+        retVal.extractedFolderName = files[0]; // Changed key from folderName to extractedFolderName
     }
-    return folderName;
+
+    fs.unlinkSync(tempdir);
+
+    return retVal;
 };

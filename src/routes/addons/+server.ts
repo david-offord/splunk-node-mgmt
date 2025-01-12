@@ -3,7 +3,6 @@ import type { AddOn, ServerClasses, ServerClassJoinAddon, AddonValidationObject 
 import type { RequestHandler } from './$types';
 import { FileSaveResults } from "$lib/enums"
 
-import * as scdf from '$lib/databaseFunctions/serverClassDatabaseFunctions';
 import * as aodf from "$lib/databaseFunctions/addonDatabaseFunctions"
 import * as aoff from "$lib/workingDirectoryFunctions/addOnFileFunctions"
 import { isNullOrUndefined } from '$lib/utils';
@@ -52,6 +51,8 @@ export const POST: RequestHandler = async function POST({ request }) {
     let newAddon: any = await request.formData();
     let validationObj: AddonValidationObject = {};
     let error = false;
+
+    let verifyAddOn = await aoff.verifyAddOn(newAddon);
 
     //save the file
     let result = await aoff.saveAddonFromFormData(newAddon);
