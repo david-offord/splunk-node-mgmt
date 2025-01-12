@@ -23,3 +23,4 @@ vite.config.ts.timestamp-*
 #proj related
 workingdirectory/ansible/*
 workingdirectory/addons/*
+workingdirectory/temp/*

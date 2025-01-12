@@ -86,7 +86,7 @@ export const verifyAddOn = async (formdata: FormData) => {
         retVal.extractedFolderName = files[0]; // Changed key from folderName to extractedFolderName
     }
 
-    fs.unlinkSync(tempdir);
+    fs.rmSync(tempdir);
 
     return retVal;
 };
