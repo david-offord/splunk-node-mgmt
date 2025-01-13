@@ -151,15 +151,16 @@ const insertNewAddon = async (addon: AddOn) => {
     //do the actual insert of the addon
     const insertPromise = new Promise<number>((resolve, reject) => {
         const stmt = db.prepare(`INSERT INTO  addons
-        ( displayName, addonFileLocation, addonIgnoreFileOption, actionOnInstallation)
+        ( displayName, addonFileLocation, addonIgnoreFileOption, actionOnInstallation, addonFolderName)
         VALUES
-        (?, ?, ?, ?)
+        (?, ?, ?, ?, ?)
         `);
 
         stmt.run(addon.displayName,
             addon.addonFileLocation,
             addon.addonIgnoreFileOption,
             addon.actionOnInstallation,
+            addon.addonFolderName,
             function (this: RunResult, err: Error | null) {
                 if (err) {
                     reject(err);
@@ -253,7 +254,8 @@ const updateExistingAddon = async (addon: AddOn) => {
         displayName = ?,
         addonFileLocation = ?,
         addonIgnoreFileOption = ?,
-        actionOnInstallation = ?
+        actionOnInstallation = ?,
+        addonFolderName = ?
         WHERE id = ?
         `);
 
@@ -261,6 +263,7 @@ const updateExistingAddon = async (addon: AddOn) => {
             addon.addonFileLocation,
             addon.addonIgnoreFileOption,
             addon.actionOnInstallation,
+            addon.addonFolderName,
             addon.id,
             function (this: RunResult, err: Error | null) {
                 if (err) {

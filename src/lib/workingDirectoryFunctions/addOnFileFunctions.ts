@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { FileSaveResults } from "$lib/enums"
 import * as utils from '$lib/utils' // Added import for utils library
+import type { AddOn } from '$lib/types';
 
 const ADD_ON_STORAGE_DIRECTORY: string = "workingdirectory/addons/"
 const TEMP_DIRECTORY: string = 'workingdirectory/temp'
@@ -50,6 +51,40 @@ export const saveAddonFromFormData = async (formdata: FormData, fileName: string
     }
 };
 
+export const checkIfAddonCanBeSaved = async (formdata: FormData, fileName: string = null, overwriteIfFoundWithFileName: string = null) => {
+    try {
+        let fileUploaded: File = formdata.get('file') as File;
+        let fileAlreadyExists = false;
+
+        if (fileUploaded === null) {
+            return FileSaveResults.Success;
+        }
+
+        if (fileName === null) {
+            fileName = fileUploaded.name;
+        }
+        //checks if file is already on file system
+        if (fs.existsSync(ADD_ON_STORAGE_DIRECTORY + '/' + fileName)) {
+            fileAlreadyExists = true;
+        }
+
+        //if they dont want us to overwrite a file, fail out
+        if (overwriteIfFoundWithFileName === null && fileAlreadyExists === true)
+            return FileSaveResults.FailedFileAlreadyExisted;
+
+        //if they allow us to overwrite a certain file, but the file the specify is not the one we'd overwrite
+        if (overwriteIfFoundWithFileName !== fileName && fileAlreadyExists === true)
+            return FileSaveResults.FailedFileAlreadyExisted;
+
+        //write it to disk
+        return fileAlreadyExists ? FileSaveResults.SuccessFileAlreadyExisted : FileSaveResults.Success;
+    }
+    catch (ex: any) {
+        console.error(ex);
+        return FileSaveResults.Failed;
+    }
+};
+
 /**
  * Attempts to untar a file on local disk.
  * 
@@ -64,8 +99,14 @@ export const verifyAddOn = async (formdata: FormData) => {
     let retVal = {
         success: true,
         error: '',
-        extractedFolderName: '' // Changed key from folderName to extractedFolderName
+        extractedFolderName: null as string // Changed key from folderName to extractedFolderName
     };
+
+    //no error if there is no addon
+    if (fileUploaded === null) {
+        return retVal;
+    }
+
 
     //make some working folders in the temp directory
     fs.mkdirSync(path.join(tempdir, 'extracted'), { recursive: true });
@@ -86,7 +127,19 @@ export const verifyAddOn = async (formdata: FormData) => {
         retVal.extractedFolderName = files[0]; // Changed key from folderName to extractedFolderName
     }
 
-    fs.rmSync(tempdir);
+    //remove the temp directory
+    fs.rmSync(tempdir, { recursive: true, force: true });
 
+    //return the results
     return retVal;
+};
+
+export const deleteAddon = async (addon: AddOn) => {
+    try {
+        //remove the temp directory
+        fs.rmSync(path.join(ADD_ON_STORAGE_DIRECTORY, addon.addonFileLocation), { recursive: true, force: true });
+    }
+    catch (ex: any) {
+        console.error(ex);
+    }
 };

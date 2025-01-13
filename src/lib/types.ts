@@ -57,7 +57,7 @@ export interface AddOn {
     addonIgnoreFileOption?: string,
     actionOnInstallation?: string,
     serverClassesAssigned?: Array<number>,
-    appFolderName?: string
+    addonFolderName?: string
 }
 
 

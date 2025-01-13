@@ -293,6 +293,7 @@
             <tr>
                 <th>Name</th>
                 <th>File Name</th>
+                <th>Folder Name</th>
                 <th># Server Classes Including This</th>
                 <th>Actions</th>
             </tr>
@@ -301,7 +302,8 @@
             {#each addOns as addon}
                 <tr>
                     <td> {addon.displayName} </td>
-                    <td> {addon.appFolderName} </td>
+                    <td> {addon.addonFileLocation} </td>
+                    <td> {addon.addonFolderName} </td>
                     <td> {addon.serverClassesAssigned?.length} </td>
                     <td>
                         <button
