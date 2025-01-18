@@ -254,9 +254,9 @@
                     </div>
                     <div class="row mt-4">
                         <div class="col-12">
-                            <label for="inputSplunkhomePath" class="form-label">SPLUNK_HOME path</label>
+                            <label for="inputSplunkhomePath" class="form-label">SPLUNK_HOME/etc/apps path</label>
                             <input bind:value={modalSplunkHomePathVal} id="inputSplunkhomePath" type="text" class="form-control" aria-describedby="splunkHomePathHelp" />
-                            <div id="splunkHomePathHelp" class="form-text">The equivalent of "/opt/splunk/" in a standard installation of splunk.</div>
+                            <div id="splunkHomePathHelp" class="form-text">The equivalent of "/opt/splunk/etc/apps" in a standard installation of splunk.</div>
                             <label for="inputSplunkhomePath" class="form-label form-validation-message {modalValidation?.splunkHomePath == null ? 'd-none' : ''}">{modalValidation?.splunkHomePath}</label>
                         </div>
                     </div>

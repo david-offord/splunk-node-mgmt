@@ -6,6 +6,7 @@ import { FileSaveResults } from "$lib/enums"
 import * as aodf from "$lib/databaseFunctions/addonDatabaseFunctions"
 import * as aoff from "$lib/workingDirectoryFunctions/addOnFileFunctions"
 import { isNullOrUndefined } from '$lib/utils';
+import { fstat } from 'fs';
 
 
 //for getting all addons
@@ -123,9 +124,11 @@ export const POST: RequestHandler = async function POST({ request }) {
 
 //for updating addon
 export const PATCH: RequestHandler = async function PATH({ request }) {
-    let newAddon: any = await request.formData();
+    let formdata: any = await request.formData();
+    let newAddon: any = formdata;
     let validationObj: AddonValidationObject = {};
     let error = false;
+    let fileUploadedName = '';//set if the file is okay to save
 
     let existingAddonDefinition = await aodf.getSingleAddon(newAddon.get('id'));
 
@@ -136,16 +139,33 @@ export const PATCH: RequestHandler = async function PATH({ request }) {
         });
     }
 
-    //save the file
-    let result = await aoff.saveAddonFromFormData(newAddon, null, existingAddonDefinition.addonFileLocation);
 
-    if (result === FileSaveResults.FailedFileAlreadyExisted) {
-        validationObj.addOnFileError = 'Addon with same file name already exists.';
+    //check if its even a valid add-on
+    let verifyAddOn = await aoff.verifyAddOn(newAddon);
+
+    //if it didnt fail lol
+    if (verifyAddOn.success === true) {
+        //save the file
+        let result = await aoff.checkIfAddonCanBeSaved(newAddon, null, existingAddonDefinition.addonFileLocation);
+
+        //save name for later
+        fileUploadedName = newAddon.get('file')?.name;
+
+        if (result === FileSaveResults.FailedFileAlreadyExisted) {
+            validationObj.addOnFileError = 'Addon with same file name already exists.';
+            error = true;
+        }
+        else if (fileUploadedName === null) {
+            validationObj.addOnFileError = 'File is required for new add-on.';
+            error = true;
+        }
+    }
+    else {
+        validationObj.addOnFileError = 'File must only contain one folder.';
         error = true;
     }
 
-    //save name for later
-    let fileUploadedName = newAddon.get('file')?.name;
+
 
     //get the other values from this thing
     newAddon = Object.fromEntries(newAddon.entries()) as AddOn;
@@ -171,6 +191,10 @@ export const PATCH: RequestHandler = async function PATH({ request }) {
         });
     }
 
+    //actyally save the file
+    let result = await aoff.saveAddonFromFormData(formdata);
+
+
     //see if we need to update the name
     if (isNullOrUndefined(fileUploadedName) === false) {
         addonPayload.addonFileLocation = fileUploadedName;
@@ -178,10 +202,18 @@ export const PATCH: RequestHandler = async function PATH({ request }) {
         addonPayload.addonFileLocation = existingAddonDefinition.addonFileLocation;
     }
 
+    if (verifyAddOn.extractedFolderName !== null) {
+        addonPayload.addonFolderName = verifyAddOn.extractedFolderName;
+    } else {
+        addonPayload.addonFolderName = existingAddonDefinition.addonFolderName;
+    }
 
-    //TODO: UPDATE THIS WITH CODE ABOVE
-
+    //save to db
     let newId = await aodf.addUpdateAddon(addonPayload);
+
+    //delete the old addon
+    await aoff.deleteAddon(existingAddonDefinition);
+
     return json(newId);
 }
 

@@ -24,3 +24,7 @@ export const callCliFunction = async (command: string, cwd: string) => {
 
     return { stdout: out, stderr: err };
 }
+
+export const logDebug = async (message: string) => {
+    console.log(message);
+}

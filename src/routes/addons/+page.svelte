@@ -90,6 +90,12 @@
         //save the class we're currrently editing for save later
         currentEditingAddon = addOn;
 
+        //remove all validation messages:
+        modalValidation = null;
+
+        //also remove any files
+        document.getElementById("inputAddonFile").value = null;
+
         //its a new addOn
         if (addOn === null) {
             unselectedServerClasses = [...possibleServerClasses];
@@ -105,9 +111,6 @@
             modalAddonDisplayName = addOn.displayName;
 
             //filter out the elements in the full list into the 2 arrays
-            console.log(addOn.serverClassesAssigned);
-            console.log(possibleServerClasses);
-
             for (let ps of possibleServerClasses) {
                 //if the host is not in the host assigned array, add it to unselected
                 console.log(ps);
@@ -358,6 +361,7 @@
                         <div class="col-sm-12 col-lg-6">
                             <label for="inputIgnoredFiles" class="form-label">Ignored Files/Paths</label>
                             <input bind:value={modalAddOnIgnoredPaths} type="text" required class="form-control" id="inputIgnoredFiles" />
+                            <div id="splunkPasswordHelpBlock" class="form-text">Assuming the working directory is the add-on, write these as a comma seperated list of fileblobs for an rm -rf command.</div>
                             <label for="inputIgnoredFiles" class="form-label form-validation-message {modalValidation == null ? 'd-none' : ''}">{modalValidation?.ignoredFiles}</label>
                         </div>
                         <div class="col-sm-12 col-lg-6">
@@ -377,7 +381,7 @@
                     </div>
                     <div class="row mt-1">
                         <div class="col-5">
-                            <select id="unselectedHostSelect" multiple style="height: 30em; width: 100%">
+                            <select id="unselectedHostSelect" multiple style="height: 20em; width: 100%">
                                 {#each unselectedServerClasses as ps}
                                     <option value={ps.id}>{ps.name}</option>
                                 {/each}
@@ -399,7 +403,7 @@
                             >
                         </div>
                         <div class="col-5">
-                            <select id="selectedHostSelect" multiple style="height: 30em;  width: 100%">
+                            <select id="selectedHostSelect" multiple style="height: 20em;  width: 100%">
                                 {#each selectedServerClasses as ps}
                                     <option value={ps.id}>{ps.name}</option>
                                 {/each}
