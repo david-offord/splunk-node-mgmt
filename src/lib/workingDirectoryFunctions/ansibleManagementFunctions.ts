@@ -28,11 +28,37 @@ export const deployAddonsToHost = async (host: Host, addons: AddOn[]) => {
         await fs.copyFileSync(path.join(BASE_DIRECTORY, ANSIBLE_ADDONS_DIRECTORY, addon.addonFileLocation), path.join(extract_folder, addon.addonFileLocation));
         //extract it
         await utils.callCliFunction(`tar -xvf ${path.join(extract_folder, addon.addonFileLocation)}`, extract_folder);
+
+        //split all the ignore paths
+        let allRemovalFiles: string[] = addon.addonIgnoreFileOption?.split(',');
+
+        //if there are any, remove them
+        if (allRemovalFiles !== null && allRemovalFiles.length > 0 && allRemovalFiles[0] !== '') {
+            for (let p of allRemovalFiles) {
+                //if it has any special directory paths
+                if (p.indexOf('..') > -1 || p.indexOf('~') > -1 || p.indexOf('!') > -1) {
+                    continue;
+                }
+                //delete the files
+                await utils.callCliFunction(`rm -rf '${path.join(extract_folder, addon.addonFolderName, p)}'`, extract_folder);
+            }
+        }
     }
 
+    //delete all the tar files in this folder
+    await utils.callCliFunction(`rm -rf '${path.join(extract_folder, '*.tar.gz')}'`, extract_folder);
+    await utils.callCliFunction(`rm -rf '${path.join(extract_folder, '*.tgz')}'`, extract_folder);
+    await utils.callCliFunction(`rm -rf '${path.join(extract_folder, '*.spl')}'`, extract_folder);
+
+    //once all the add-ons are extracted, rsync them over to the machine
+    let commandPrefix = `ansible ${host.ansibleName} -i inventory.yaml --vault-password-file .pass `;
+
+    output = await callAnsibleFunction(`${commandPrefix} ` +
+        `-m synchronize -a "-a "src='${extract_folder}'  dest=/tmp`);
+    //ansible rasppi_02001 -i inventory.yaml --vault-password-file .pass -m synchronize -a "src=../ansible dest=/tmp"
     return;
 
-    let commandPrefix = `ansible ${host.ansibleName} -i inventory.yaml --vault-password-file .pass `;
+    commandPrefix = `ansible ${host.ansibleName} -i inventory.yaml --vault-password-file .pass `;
 
     //create the wd folder in /opt
     output = await callAnsibleFunction(`${commandPrefix} -b -m file -a "path=${REMOTE_BASE_APP_COMPRESSED_DIRECTORY} state=directory"`);
