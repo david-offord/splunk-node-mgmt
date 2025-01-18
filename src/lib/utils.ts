@@ -26,5 +26,15 @@ export const callCliFunction = async (command: string, cwd: string) => {
 }
 
 export const logDebug = async (message: string) => {
+    if (isNullOrUndefined(message) || message === "")
+        return;
+
     console.log(message);
+}
+
+export const logError = async (message: string) => {
+    if (isNullOrUndefined(message) || message === "")
+        return;
+
+    console.error(message);
 }

@@ -126,8 +126,25 @@
     }
 
     async function redeployAddOns(selectedHost: Host) {
+        //get the button that was pressed
+        const buttonPressed = document.getElementById(`RedeployAddons_${selectedHost.id}`);
+
+        //its already running
+        if (buttonPressed.hasAttribute("currentlyRefreshing")) {
+            return;
+        }
+
+        //its not already running, replace the icon
+        buttonPressed.setAttribute("currentlyRefreshing", "true");
+        buttonPressed.innerHTML = '<i class="bi bi-stopwatch"></i>';
+
         const response = await fetch(DEPLOY_ADDON_AD_HOC_ROUTE, { method: "POST", body: JSON.stringify(selectedHost) });
         await response.json();
+        //TODO: ERROR CHECKING
+
+        //once it completes, replace the icon
+        buttonPressed.removeAttribute("currentlyRefreshing");
+        buttonPressed.innerHTML = '<i class="bi bi-arrow-up-right"></i>';
     }
 
     //Add all listeners
@@ -189,7 +206,7 @@
                                 <button aria-label="Edit Host" data-bs-toggle="tooltip" data-placement="top" title="Edit Host" onclick={() => setModalValues(host.id)}>
                                     <i class="bi bi-pencil"></i>
                                 </button>
-                                <button aria-label="Redeploy Add-ons" data-bs-toggle="tooltip" data-placement="top" title="Redeploy Add-ons" onclick={() => redeployAddOns(host)}>
+                                <button id="RedeployAddons_{host.id}" aria-label="Redeploy Add-ons" data-bs-toggle="tooltip" data-placement="top" title="Redeploy Add-ons" onclick={() => redeployAddOns(host)}>
                                     <i class="bi bi-arrow-up-right"></i>
                                 </button>
                                 <button aria-label="Delete Host" data-bs-toggle="tooltip" data-placement="top" title="Delete Host" onclick={() => deleteHost(host)}>
