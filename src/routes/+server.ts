@@ -5,6 +5,7 @@ import * as df from '$lib/databaseFunctions/hostDatabaseFunctions.js' //example 
 import * as af from '$lib/workingDirectoryFunctions/ansibleInventoryManagementFunctions.js' //example of importing a bunch of functions
 import * as isIp from 'is-ip';
 import * as net from 'net';
+import { isNullOrUndefined } from '$lib/utils';
 
 //for updating/adding host
 export const GET: RequestHandler = async function GET({ request }) {
@@ -35,9 +36,20 @@ export const POST: RequestHandler = async function POST({ request }) {
         error = true;
         errorPayload.linuxUsername = "Username is required."
     }
-    if (host.splunkHomePath === null || host.splunkHomePath === '') {
+
+    //mgmt port validation
+    if (isNullOrUndefined(host.splunkManagementPort) || host.splunkManagementPort === '') {
         error = true;
-        errorPayload.splunkHomePath = "SPLUNK_HOME path is required."
+        errorPayload.splunkManagementPort = "Management Port is required."
+    }
+    else if (isNaN(parseInt(host.splunkManagementPort))) {
+        error = true;
+        errorPayload.splunkManagementPort = "Management Port must be a number."
+    }
+
+    if (isNullOrUndefined(host.splunkRestartCommand) || host.splunkRestartCommand === '') {
+        error = true;
+        errorPayload.splunkRestartCommand = "Restart command is required."
     }
 
     //test connectivity

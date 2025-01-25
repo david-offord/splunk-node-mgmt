@@ -1,5 +1,5 @@
 <script lang="ts">
-    import type { Host, ValidationObject } from "$lib/types";
+    import type { Host, ServerClasses, ValidationObject } from "$lib/types";
     import { DEPLOY_ADDON_AD_HOC_ROUTE } from "$lib/constants";
     import type { PageServerData } from "./$types";
     import type { Modal } from "bootstrap";
@@ -26,11 +26,17 @@
     let modalLinuxPasswordVal: string = $state("");
     let modalSplunkPasswordVal: string = $state("");
     let modalSplunkHomePathVal: string = $state("");
+    let modalSplunkRestartCommand: string = $state("");
+    let modalSplunkManagementPort: string = $state("");
     let newHost = false;
     let searchString: string = $state("");
 
+    //used for server class selection
+    let unselectedServerClasses = $state(data.allPossibleServerClasses);
+    let selectedServerClasses: ServerClasses[] = $state([]);
+
     //DEFAULT VALUES
-    let defaultSplunkHome = "/opt/splunk";
+    let defaultSplunkHome = "/opt/splunk/etc/apps";
 
     //used for validation later
     let modalValidation: ValidationObject = $state();
@@ -61,6 +67,8 @@
         modalLinuxUsernameVal = modalHost?.linuxUsername;
         modalCustomerCodeVal = modalHost?.customerCode!;
         modalSplunkHomePathVal = modalHost?.splunkHomePath!;
+        modalSplunkRestartCommand = modalHost?.splunkRestartCommand?.toString();
+        modalSplunkManagementPort = modalHost?.splunkManagementPort?.toString();
         modalValidation = null;
         newHost = false;
         showHideModal(true);
@@ -76,6 +84,8 @@
         modalLinuxUsernameVal = "";
         modalLinuxPasswordVal = "";
         modalSplunkPasswordVal = "";
+        modalSplunkRestartCommand = "/opt/splunk/bin/splunk restart";
+        modalSplunkManagementPort = "8089";
         modalSplunkHomePathVal = defaultSplunkHome;
         newHost = true;
         modalValidation = null;
@@ -103,6 +113,8 @@
             linuxPassword: modalLinuxPasswordVal,
             splunkPassword: modalSplunkPasswordVal,
             splunkHomePath: modalSplunkHomePathVal,
+            splunkManagementPort: modalSplunkManagementPort,
+            splunkRestartCommand: modalSplunkRestartCommand,
         };
 
         const response = await fetch($page.url.pathname, { method: "POST", body: JSON.stringify(hostForApi) });
@@ -277,7 +289,56 @@
                             <label for="inputSplunkhomePath" class="form-label form-validation-message {modalValidation?.splunkHomePath == null ? 'd-none' : ''}">{modalValidation?.splunkHomePath}</label>
                         </div>
                     </div>
+                    <div class="row mt-4">
+                        <div class="col-6">
+                            <label for="inputSplunkRestartCommandHelp" class="form-label">Splunk Restart Command</label>
+                            <input bind:value={modalSplunkRestartCommand} id="inputSplunkRestartCommand" type="text" class="form-control" aria-describedby="splunkHomePathHelp" />
+                            <div id="inputSplunkRestartCommandHelp" class="form-text">The equivalent of "/opt/splunk/bin/splunk restart" in a standard installation of Splunk.</div>
+                            <label for="inputSplunkRestartCommandHelp" class="form-label form-validation-message {modalValidation?.splunkRestartCommand == null ? 'd-none' : ''}">{modalValidation?.splunkRestartCommand}</label>
+                        </div>
+                        <div class="col-6">
+                            <label for="inputSplunkManagementPort" class="form-label">Splunk Management Port</label>
+                            <input bind:value={modalSplunkManagementPort} id="inputSplunkManagementPort" type="text" class="form-control" aria-describedby="splunkHomePathHelp" />
+                            <div id="inputSplunkManagementPortHelp" class="form-text">Typically 8089.</div>
+                            <label for="inputSplunkManagementPortHelp" class="form-label form-validation-message {modalValidation?.splunkManagementPort == null ? 'd-none' : ''}">{modalValidation?.splunkManagementPort}</label>
+                        </div>
+                    </div>
                     <p class="form-label form-validation-message">{modalValidation?.generalError}</p>
+                    <hr class="mt-3" />
+                    <div class="row mt-2">
+                        <div class="col-12 d-flex justify-content-center align-items-center">
+                            <h5 class="">Server Classes</h5>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-5">
+                            <select id="unselectedHostSelect" multiple style="height: 30em; width: 100%">
+                                {#each unselectedServerClasses as sc}
+                                    <option value={sc.id}>{sc.name}</option>
+                                {/each}
+                            </select>
+                        </div>
+                        <div class="col-2 d-flex align-items-center justify-content-center">
+                            <button
+                                onclick={() => {
+                                    //moveHostToLeftModal();
+                                }}>&lt;</button
+                            >
+                            <br />
+                            <button
+                                onclick={() => {
+                                    //moveHostToRightModal();
+                                }}>&gt;</button
+                            >
+                        </div>
+                        <div class="col-5">
+                            <select id="selectedHostSelect" multiple style="height: 30em;  width: 100%">
+                                {#each selectedServerClasses as sc}
+                                    <option value={sc.id}>{sc.name}</option>
+                                {/each}
+                            </select>
+                        </div>
+                    </div>
                 </form>
             </div>
             <div class="modal-footer">

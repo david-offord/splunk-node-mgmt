@@ -1,4 +1,4 @@
-import type { AddOn, Host } from "$lib/types.ts"
+import type { AddOn, Host, HostJoinServerClass } from "$lib/types.ts"
 import sqlite3 from 'sqlite3';
 import type { Database, Statement, RunResult } from 'sqlite3'
 import db from '$lib/server/db';
@@ -148,6 +148,24 @@ export const getAllAddonsForHost = async (hostId: number) => {
     return rows;
 }
 
+export const getServerClassByHosts = async () => {
+    const loadDataPromise = new Promise<HostJoinServerClass[]>((resolve, reject) => {
+        const query = ` SELECT sch.hostId as id , sch.serverClassId
+                        FROM serverClassByHost sch`;
+
+        db.all<HostJoinServerClass>(query, (err: Error | null, rows: HostJoinServerClass[]) => {
+            if (err) {
+                reject(err);
+                return;
+            }
+            resolve(rows)
+        })
+    });
+    const rows = await loadDataPromise;
+
+    return rows;
+}
+
 
 //***************************************
 //BEGIN PRIVATE FUNCTIONS
@@ -170,9 +188,9 @@ const loadDb = async () => {
 const insertNewHost = async (host: Host) => {
     const loadDataPromise = new Promise<number>((resolve, reject) => {
         const stmt = db.prepare(`INSERT INTO Hosts 
-        ( customerCode, ipAddress, hostname, ansibleName, linuxUsername, splunkHomePath)
+        ( customerCode, ipAddress, hostname, ansibleName, linuxUsername, splunkHomePath, splunkRestartCommand, splunkManagementPort)
         VALUES
-        (?, ?, ?, ?, ?, ?)
+        (?, ?, ?, ?, ?, ?, ?, ?)
         `);
 
         stmt.run(host.customerCode,
@@ -181,6 +199,8 @@ const insertNewHost = async (host: Host) => {
             host.hostname.replaceAll('-', '_').replaceAll(' ', '_') + '_' + host.customerCode,
             host.linuxUsername,
             host.splunkHomePath,
+            host.splunkRestartCommand,
+            host.splunkManagementPort,
             function (this: RunResult, err: Error | null) {
                 if (err) {
                     reject(err);
@@ -199,7 +219,7 @@ const insertNewHost = async (host: Host) => {
 const updateExistingHost = async (host: Host) => {
     const loadDataPromise = new Promise<Host[]>((resolve, reject) => {
         const stmt = db.prepare(`UPDATE Hosts 
-        SET customerCode=?, ipAddress=?, hostname=?, ansibleName=?, linuxUsername=?, splunkHomePath=?
+        SET customerCode=?, ipAddress=?, hostname=?, ansibleName=?, linuxUsername=?, splunkHomePath=?, splunkRestartCommand=?, splunkManagementPort=?
         WHERE id=?;
         `);
 
@@ -209,6 +229,8 @@ const updateExistingHost = async (host: Host) => {
             host.hostname.replaceAll('-', '_').replaceAll(' ', '_') + '_' + host.customerCode,
             host.linuxUsername,
             host.splunkHomePath,
+            host.splunkRestartCommand,
+            host.splunkManagementPort,
             host.id,
             (err: Error | null, rows: Host[]) => {
                 if (err) {

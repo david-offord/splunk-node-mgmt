@@ -8,7 +8,8 @@ export interface ValidationObject {
     splunkPassword?: string,
     splunkHomePath?: string,
     ansibleName?: string | null,
-
+    splunkRestartCommand?: string | null,
+    splunkManagementPort?: string | null,
 }
 
 export interface AddonValidationObject {
@@ -28,6 +29,9 @@ export interface Host {
     linuxPassword?: string,
     splunkPassword?: string,
     ansibleName?: string | null,
+    splunkRestartCommand?: string | null,
+    splunkManagementPort?: string | null,
+    serverClassesAssigned?: Array<number>,
 }
 
 export interface HostJoinServerClass extends Host {

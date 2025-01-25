@@ -52,7 +52,7 @@ export const deployAddonsToHost = async (host: Host, addons: AddOn[]) => {
     output = await callAnsibleFunction(`${commandPrefix} -m synchronize -a "src='${extract_folder}/'  dest=${host.splunkHomePath}"`, BASE_DIRECTORY + ANSIBLE_WORKING_DIRECTORY);
 
     //delete the temp folder
-    fs.rmdirSync(extract_folder, { recursive: true });
+    fs.rmSync(extract_folder, { recursive: true });
 
     //log everything
     utils.logDebug(output.stdout);
