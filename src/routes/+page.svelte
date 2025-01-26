@@ -6,6 +6,7 @@
     import type * as bootstrap from "bootstrap";
     import { page } from "$app/stores";
     import { onMount } from "svelte";
+    import type { Server } from "http";
 
     //get the hosts from the db
     let { data, form }: { data: PageServerData; form: FormData } = $props();
@@ -32,6 +33,7 @@
     let searchString: string = $state("");
 
     //used for server class selection
+    let possibleServerClasses = $state(data.allPossibleServerClasses);
     let unselectedServerClasses = $state(data.allPossibleServerClasses);
     let selectedServerClasses: ServerClasses[] = $state([]);
 
@@ -43,6 +45,33 @@
 
     function searchHosts() {
         visibleHosts = hosts.filter((x) => x.hostname.toLocaleLowerCase().includes(searchString.toLocaleLowerCase()));
+    }
+
+    function sortArraysForDisplay() {
+        unselectedServerClasses = unselectedServerClasses.sort((a, b) => {
+            const nameA = a.name.toUpperCase(); // ignore upper and lowercase
+            const nameB = b.name.toUpperCase(); // ignore upper and lowercase
+            if (nameA < nameB) {
+                return -1;
+            }
+            if (nameA > nameB) {
+                return 1;
+            }
+            // names must be equal
+            return 0;
+        });
+        selectedServerClasses = selectedServerClasses.sort((a, b) => {
+            const nameA = a.name.toUpperCase(); // ignore upper and lowercase
+            const nameB = b.name.toUpperCase(); // ignore upper and lowercase
+            if (nameA < nameB) {
+                return -1;
+            }
+            if (nameA > nameB) {
+                return 1;
+            }
+            // names must be equal
+            return 0;
+        });
     }
 
     //toggle modal
@@ -71,6 +100,22 @@
         modalSplunkManagementPort = modalHost?.splunkManagementPort?.toString();
         modalValidation = null;
         newHost = false;
+
+        unselectedServerClasses = [];
+        selectedServerClasses = [];
+
+        //set the selected server classes
+        for (let ps of possibleServerClasses) {
+            //if the host is not in the host assigned array, add it to unselected
+            if (modalHost.serverClassesAssigned.findIndex((x) => x == ps.id) === -1) {
+                unselectedServerClasses.push(ps);
+            } else {
+                selectedServerClasses.push(ps);
+            }
+        }
+
+        sortArraysForDisplay();
+
         showHideModal(true);
     }
 
@@ -103,6 +148,12 @@
 
     //call an api
     async function saveHostValues(selectedHost: Host) {
+        //@ts-ignore
+        let selectedServerClass: number[] = [...document.getElementById("selectServerClasses").children].map((x: HTMLElement) => {
+            // @ts-ignore
+            return x.value;
+        });
+
         //create a new obj
         let hostForApi: Host = {
             id: modalHost?.id ?? null,
@@ -115,6 +166,7 @@
             splunkHomePath: modalSplunkHomePathVal,
             splunkManagementPort: modalSplunkManagementPort,
             splunkRestartCommand: modalSplunkRestartCommand,
+            serverClassesAssigned: selectedServerClass,
         };
 
         const response = await fetch($page.url.pathname, { method: "POST", body: JSON.stringify(hostForApi) });
@@ -159,11 +211,107 @@
         buttonPressed.innerHTML = '<i class="bi bi-arrow-up-right"></i>';
     }
 
+    async function redeployAllAddOns() {
+        //get the button that was pressed
+        const buttonPressed = document.getElementById(`RedeployAllAddons`);
+
+        //its already running
+        if (buttonPressed.hasAttribute("currentlyRefreshing")) {
+            return;
+        }
+
+        //its not already running, replace the icon
+        buttonPressed.setAttribute("currentlyRefreshing", "true");
+        buttonPressed.innerHTML = '<i class="bi bi-stopwatch"></i>';
+
+        const response = await fetch(DEPLOY_ADDON_AD_HOC_ROUTE, { method: "PATCH" });
+        await response.json();
+
+        //once it completes, replace the icon
+        buttonPressed.removeAttribute("currentlyRefreshing");
+        buttonPressed.innerHTML = "Deploy All";
+    }
+
+    //unselect a option in the selected select box
+    function moveServerClassToLeftSelect() {
+        //get the values the user selected
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
+        let moveServerClasses: number[] = [...document.getElementById("selectServerClasses").selectedOptions].map((x) => x.value);
+
+        //now, search the selected hosts, and pop any movehost values and put them into unselected
+        for (let msc of moveServerClasses) {
+            //get the host and index first
+            let sc: ServerClasses = null;
+            let index: number = 0;
+
+            for (let i = 0; i < selectedServerClasses.length; i++) {
+                //if it matches
+                if (selectedServerClasses[i].id == msc) {
+                    //save that info
+                    index = i;
+                    sc = selectedServerClasses[i];
+                    //and break
+                    break;
+                }
+            }
+
+            //if we dont find anything for some reason, ignore
+            if (sc === null) {
+                continue;
+            }
+
+            //remove it from selected
+            selectedServerClasses.splice(index, 1);
+            //add it to the unselected ones
+            unselectedServerClasses.push(sc);
+        }
+        sortArraysForDisplay();
+    }
+
+    //select a option in the unselected select box
+    function moveServerClassToRightSelect() {
+        //get the values the user selected
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
+        let moveServerClasses: number[] = [...document.getElementById("unselectServerClasses").selectedOptions].map((x) => x.value);
+
+        //now, search the selected hosts, and pop any movehost values and put them into unselected
+        for (let msc of moveServerClasses) {
+            //get the host and index first
+            let sc: ServerClasses = null;
+            let index: number = 0;
+
+            for (let i = 0; i < unselectedServerClasses.length; i++) {
+                //if it matches
+                if (unselectedServerClasses[i].id == msc) {
+                    //save that info
+                    index = i;
+                    sc = unselectedServerClasses[i];
+                    //and break
+                    break;
+                }
+            }
+
+            //if we dont find anything for some reason, ignore
+            if (sc === null) {
+                continue;
+            }
+
+            //remove it from selected
+            unselectedServerClasses.splice(index, 1);
+            //add it to the unselected ones
+            selectedServerClasses.push(sc);
+        }
+        sortArraysForDisplay();
+    }
+
     //Add all listeners
     onMount(() => {
         const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
         // @ts-ignore
         const tooltipList = [...tooltipTriggerList].map((tooltipTriggerEl) => new bootstrap.Tooltip(tooltipTriggerEl));
+        sortArraysForDisplay();
     });
 </script>
 
@@ -312,7 +460,7 @@
                     </div>
                     <div class="row">
                         <div class="col-5">
-                            <select id="unselectedHostSelect" multiple style="height: 30em; width: 100%">
+                            <select id="unselectServerClasses" multiple style="height: 30em; width: 100%">
                                 {#each unselectedServerClasses as sc}
                                     <option value={sc.id}>{sc.name}</option>
                                 {/each}
@@ -321,18 +469,18 @@
                         <div class="col-2 d-flex align-items-center justify-content-center">
                             <button
                                 onclick={() => {
-                                    //moveHostToLeftModal();
+                                    moveServerClassToLeftSelect();
                                 }}>&lt;</button
                             >
                             <br />
                             <button
                                 onclick={() => {
-                                    //moveHostToRightModal();
+                                    moveServerClassToRightSelect();
                                 }}>&gt;</button
                             >
                         </div>
                         <div class="col-5">
-                            <select id="selectedHostSelect" multiple style="height: 30em;  width: 100%">
+                            <select id="selectServerClasses" multiple style="height: 30em;  width: 100%">
                                 {#each selectedServerClasses as sc}
                                     <option value={sc.id}>{sc.name}</option>
                                 {/each}
@@ -356,6 +504,14 @@
 </div>
 
 <span id="TestFloatingAdd">
+    <button
+        id="RedeployAllAddons"
+        class="btn btn-success btn-lg"
+        type="button"
+        onclick={() => {
+            redeployAllAddOns();
+        }}>Deploy All</button
+    >
     <button
         class="btn btn-success btn-lg"
         type="button"

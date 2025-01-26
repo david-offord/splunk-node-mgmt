@@ -82,6 +82,9 @@ export const addUpdateHost = async (updateHost: Host) => {
             await updateExistingHost(updateHost);
             id = existingHost.id;
         }
+
+        //update the server class links
+        updateHostLinksToServerClass(updateHost);
     }
     catch (ex) {
         if (typeof ex === "string") {
@@ -246,3 +249,43 @@ const updateExistingHost = async (host: Host) => {
     const rows = await loadDataPromise;
     return rows;
 }
+
+//Get a single host based on ID. Returns null if no host is found
+const updateHostLinksToServerClass = async (host: Host) => {
+    //delete all the server class by host entries for this host
+    const deleteScPromise = new Promise<void>((resolve, reject) => {
+        const stmt = db.prepare(`DELETE FROM serverClassByHost WHERE hostId = ?;`);
+        stmt.run(host.id,
+            (err: Error | null) => {
+                if (err) {
+                    reject(err);
+                    return;
+                }
+                resolve()
+            });
+    });
+
+    //check how many rows came back
+    await deleteScPromise;
+
+    //add new entries for each server class
+    let insertPromises: Promise<void>[] = [];
+    const stmt = db.prepare(`INSERT INTO serverClassByHost (serverClassId, hostId)
+                            VALUES (?, ?);`);
+    //do it for every host assigned
+    for (let serverClassId of host.serverClassesAssigned) {
+        let loadDataPromise = new Promise<void>((resolve, reject) => {
+            stmt.run(serverClassId, host.id,
+                (err: Error | null) => {
+                    if (err) {
+                        reject(err);
+                        return;
+                    }
+                    resolve()
+                });
+        })
+        insertPromises.push(loadDataPromise);
+    }
+    await Promise.all(insertPromises);
+}
+

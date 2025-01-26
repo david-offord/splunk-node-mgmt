@@ -4,6 +4,7 @@ import { exec } from 'child_process';
 import * as utils from '$lib/utils'
 import * as fs from "fs";
 import path from "path";
+import { log } from "console";
 
 const BASE_DIRECTORY = '/home/dave/git_projects/splunk-node-mgmt';
 const ANSIBLE_WORKING_DIRECTORY = '/workingdirectory/ansible';
@@ -38,6 +39,9 @@ export const deployAddonsToHost = async (host: Host, addons: AddOn[]) => {
                 await utils.callCliFunction(`rm -rf '${path.join(extract_folder, addon.addonFolderName, p)}'`, extract_folder);
             }
         }
+
+        //add in a "managed by us" file
+        fs.writeFileSync(path.join(extract_folder, addon.addonFolderName, 'managed_by_snm'), 'This file is managed by the Splunk Node Management Tool.Do not modify or delete.\n');
     }
 
     //delete all the tar files in this folder
@@ -48,107 +52,100 @@ export const deployAddonsToHost = async (host: Host, addons: AddOn[]) => {
     //once all the add-ons are extracted, rsync them over to the machine
     let commandPrefix = `ansible ${host.ansibleName} -i inventory.yaml -b --vault-password-file .pass `;
 
-    //call the sync function
-    output = await callAnsibleFunction(`${commandPrefix} -m synchronize -a "src='${extract_folder}/'  dest=${host.splunkHomePath}"`, BASE_DIRECTORY + ANSIBLE_WORKING_DIRECTORY);
+    //do we need to restart? use this variable to determine it below
+    let currentActionNeeded = 'none';
 
-    //delete the temp folder
-    fs.rmSync(extract_folder, { recursive: true });
-
-    //log everything
-    utils.logDebug(output.stdout);
-    utils.logError(output.stdout);
-
-    return;
-
-}
-
-
-
-
-
-
-
-
-
-
-
-
-export const deployAddonsToHost2 = async (host: Host, addons: AddOn[]) => {
-    let commandPrefix = `ansible ${host.ansibleName} -i inventory.yaml --vault-password-file .pass `;
-
-    //create the wd folder in /opt
-    let output = await callAnsibleFunction(`${commandPrefix} -b -m file -a "path=${REMOTE_BASE_APP_COMPRESSED_DIRECTORY} state=directory"`);
-    logDebug(output.stdout);
-    output = await callAnsibleFunction(`${commandPrefix} -b -m file -a "path=${REMOTE_TEMP_EXTRACT_FOLDER} state=directory"`);
-    logDebug(output.stdout);
-
-    //for each addon, deploy it
+    //call the sync function for each add-on
     for (let addon of addons) {
-        //copy the file
-        output = await callAnsibleFunction(`ansible ${host.ansibleName} -i inventory.yaml -b --vault-password-file .pass ` +
-            `-m copy -a "src='${BASE_DIRECTORY + ANSIBLE_ADDONS_DIRECTORY}/${addon.addonFileLocation}' ` +
-            `dest=${REMOTE_BASE_APP_COMPRESSED_DIRECTORY}"`);
-        logDebug(output.stdout);
-    }
+        output = await callAnsibleFunction(`${commandPrefix} -m synchronize -a "checksum=True archive=True times=False src='${extract_folder}/${addon.addonFolderName}/'  dest=${host.splunkHomePath}/${addon.addonFolderName}/"`, BASE_DIRECTORY + ANSIBLE_WORKING_DIRECTORY);
 
-
-    //once we have deployed all the addons, we need to extract them
-    //i do this down here cause I don't love the idea of having it copy, extract, copy, extract
-    for (let addon of addons) {
-        //copy the file
-        output = await callAnsibleFunction(`ansible ${host.ansibleName} -i inventory.yaml -b --vault-password-file .pass ` +
-            `-m unarchive -a "remote_src=true src='${REMOTE_BASE_APP_COMPRESSED_DIRECTORY}/${addon.addonFileLocation}' ` +
-            `dest=${REMOTE_TEMP_EXTRACT_FOLDER}"`);
-        logDebug(output.stdout);
-    }
-
-    //once we have deployed all the addons, we need to extract them
-    //i do this down here cause I don't love the idea of having it copy, extract, copy, extract
-    for (let addon of addons) {
-        //copy the file
-        output = await callAnsibleFunction(`ansible ${host.ansibleName} -i inventory.yaml -b --vault-password-file .pass ` +
-            `-m unarchive -a "remote_src=true src='${REMOTE_BASE_APP_COMPRESSED_DIRECTORY}/${addon.addonFileLocation}' ` +
-            `dest=${REMOTE_TEMP_EXTRACT_FOLDER}"`);
-        logDebug(output.stdout);
-
-        let allRemovalFiles: string[] = addon.addonIgnoreFileOption?.split(',');
-        if (allRemovalFiles !== null && allRemovalFiles.length > 0 && allRemovalFiles[0] !== '') {
-            for (let p of allRemovalFiles) {
-                //if it has any special directory paths
-                if (p.indexOf('..') > -1 || p.indexOf('~') > -1 || p.indexOf('!') > -1) {
-                    continue;
-                }
-                //delete the files
-                output = await callAnsibleFunction(`ansible ${host.ansibleName} -i inventory.yaml -b --vault-password-file .pass ` +
-                    `-m shell -a "rm -rf '${path.join(REMOTE_TEMP_EXTRACT_FOLDER, addon.addonFolderName, p)}'"`);
-
+        //parse out the ansible output
+        let ansibleParsed = utils.parseAnsibleOutput(output.stdout);
+        //if it was changed
+        if (ansibleParsed?.status?.toLocaleLowerCase() !== 'success') {
+            //if the add-on needs to be refreshed, and they haven't already said to restart
+            if (addon.actionOnInstallation === 'refresh' && currentActionNeeded !== 'restart') {
+                currentActionNeeded = 'refresh';
+            }
+            //if they say they need to restart, then restart
+            else if (addon.actionOnInstallation === 'restart') {
+                currentActionNeeded = 'restart';
             }
         }
     }
 
-    //once we have deployed all the addons, we need to extract them
-    //i do this down here cause I don't love the idea of having it copy, extract, copy, extract
-    for (let addon of addons) {
-        //copy the file
-        output = await callAnsibleFunction(`ansible ${host.ansibleName} -i inventory.yaml -b --vault-password-file .pass ` +
-            `-m copy -a "remote_src=true src='${path.join(REMOTE_TEMP_EXTRACT_FOLDER, addon.addonFolderName)}' ` +
-            `dest=${host.splunkHomePath}"`);
+    //delete the temp folder
+    fs.rmSync(extract_folder, { recursive: true });
+
+    //restart/debug refresh if applicable
+    if (currentActionNeeded === 'refresh') {
+        utils.logDebug(`Debug Refreshing ${host.hostname} after deployment of apps...`);
+        //todo: havent done debug refresh function yet
+    }
+    else if (currentActionNeeded === 'restart') {
+        utils.logDebug(`Restarting Splunk on ${host.hostname} after deployment of apps...`);
+        output = await callAnsibleFunction(`${commandPrefix} -m shell -a "${host.splunkRestartCommand}"`, BASE_DIRECTORY + ANSIBLE_WORKING_DIRECTORY);
         logDebug(output.stdout);
     }
 
+    //we finished!
+    utils.logDebug(`Finished deploying add-ons to ${host.hostname}.`);
+}
 
-    //then make them all 755, owned by splunk
-    for (let addon of addons) {
-        //copy the file
-        output = await callAnsibleFunction(`ansible ${host.ansibleName} -i inventory.yaml -b --vault-password-file .pass ` +
-            `-m file -a "mode=0755 owner=splunk group=splunk recurse=true ` +
-            `path=${host.splunkHomePath + '/' + addon.addonFolderName} "`);
-        logDebug(output.stdout);
+
+
+export const deleteAddonsNoLongerManaged = async (host: Host, addons: AddOn[]) => {
+    utils.logDebug(`Beginning check to delete add-ons removed within SNM for ${host.hostname}.`);
+    let commandPrefix = `ansible ${host.ansibleName} -i inventory.yaml -b --vault-password-file .pass `;
+    //first things first, pull all the add-ons that are currently on the machine that WE manage
+    let output = await callAnsibleFunction(`${commandPrefix} -m shell -a 'ls ${host.splunkHomePath}/*/managed_by_snm'`, BASE_DIRECTORY + ANSIBLE_WORKING_DIRECTORY);
+
+    //if theres no stdout, there were no add-ons:
+    if (output.stdout === '') {
+        utils.logDebug(`No add-ons managed by SNM on ${host.hostname}.`);
+        return;
     }
 
+    let ansibleParsed = utils.parseAnsibleOutput(output.stdout);
 
+    //split up the output
+    let allManagedAddons: string[] = ansibleParsed.message.split('\n').slice(1);
+    let managedAddonNames: string[] = [];
+
+    //extract the add-on name from the paths
+    for (let addonOnMachine of allManagedAddons) {
+        let addonSplit = addonOnMachine.split('/');
+
+        if (addonSplit.length < 2)
+            continue;
+
+        managedAddonNames.push(addonSplit[addonSplit.length - 2]);
+    }
+
+    //now, compare the managed add-ons to the add-ons we have in the database
+    for (let addonOnHost of managedAddonNames) {
+        let indexOfHost = addons.findIndex((addon) => addon.addonFolderName === addonOnHost);
+
+        if (indexOfHost === -1) {
+            utils.logDebug(`Deleting ${addonOnHost} from ${host.hostname} as it is no longer managed by SNM.`);
+            //delete the add-on
+            output = await callAnsibleFunction(`${commandPrefix} -m shell -a 'rm -rf ${host.splunkHomePath}/${addonOnHost}'`, BASE_DIRECTORY + ANSIBLE_WORKING_DIRECTORY);
+        }
+
+    }
+
+    //we finished!
+    utils.logDebug(`Finished deleting add-ons removed within SNM for ${host.hostname}.`);
 
 }
+
+
+
+
+
+
+
+
 
 
 

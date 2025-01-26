@@ -3,13 +3,41 @@ import type { Host, ValidationObject } from "$lib/types.ts"
 import type { RequestHandler } from './$types';
 import * as df from '$lib/databaseFunctions/hostDatabaseFunctions.js' //example of importing a bunch of functions
 import * as af from '$lib/workingDirectoryFunctions/ansibleInventoryManagementFunctions.js' //example of importing a bunch of functions
+import * as scdf from "$lib/databaseFunctions/serverClassDatabaseFunctions"
 import * as isIp from 'is-ip';
 import * as net from 'net';
 import { isNullOrUndefined } from '$lib/utils';
 
 //for updating/adding host
 export const GET: RequestHandler = async function GET({ request }) {
-    return json(await df.getAllHosts());
+
+    let rows = await df.getAllHosts();
+    //get all of the server classes 
+    let allServerClasses = await scdf.getAllServerClasses();
+
+    //get a list of host -> server classes
+    let serverclassesByHost = await df.getServerClassByHosts();
+
+    //build an object of host -> server classes
+    let hostsByServerClass: any = {};
+
+    //divide the server classes to their hosts
+    for (let serverClassByHost of serverclassesByHost) {
+        if (hostsByServerClass[serverClassByHost.id] === undefined) {
+            hostsByServerClass[serverClassByHost.id] = [];
+        }
+        hostsByServerClass[serverClassByHost.id].push(serverClassByHost.serverClassId);
+    }
+
+    //for each host, assign the servler class list for it
+    for (let host of rows) {
+        if (isNullOrUndefined(hostsByServerClass[host.id]))
+            host.serverClassesAssigned = [];
+        else
+            host.serverClassesAssigned = hostsByServerClass[host.id];
+    }
+
+    return json(rows);
 }
 
 //for updating/adding host

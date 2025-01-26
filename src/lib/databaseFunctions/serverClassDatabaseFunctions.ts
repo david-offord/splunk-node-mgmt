@@ -112,7 +112,6 @@ export const updateServerClassHosts = async (serverClass: ServerClasses) => {
         insertPromises.push(loadDataPromise);
     }
     await Promise.all(insertPromises);
-    console.log('aaaa');
 }
 
 
