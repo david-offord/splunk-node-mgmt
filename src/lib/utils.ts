@@ -31,16 +31,30 @@ export const sleep = (ms: number) => {
 
 
 export const logDebug = async (message: string) => {
+    const timestamp = new Date().toISOString();
     if (isNullOrUndefined(message) || message === "")
         return;
 
+    message = timestamp + ": " + message;
+    console.log(message);
+}
+
+
+export const logInfo = async (message: string) => {
+    const timestamp = new Date().toISOString();
+    if (isNullOrUndefined(message) || message === "")
+        return;
+
+    message = timestamp + ": " + message;
     console.log(message);
 }
 
 export const logError = async (message: string) => {
+    const timestamp = new Date().toISOString();
     if (isNullOrUndefined(message) || message === "")
         return;
 
+    message = timestamp + ": " + message;
     console.error(message);
 }
 

@@ -5,6 +5,7 @@ import * as utils from '$lib/utils'
 import * as fs from "fs";
 import path from "path";
 import { log } from "console";
+import { debugRefreshSplunk } from "./splunkManagementFunctions";
 
 const BASE_DIRECTORY = '/home/dave/git_projects/splunk-node-mgmt';
 const ANSIBLE_WORKING_DIRECTORY = '/workingdirectory/ansible';
@@ -79,30 +80,30 @@ export const deployAddonsToHost = async (host: Host, addons: AddOn[]) => {
 
     //restart/debug refresh if applicable
     if (currentActionNeeded === 'refresh') {
-        utils.logDebug(`Debug Refreshing ${host.hostname} after deployment of apps...`);
-        //todo: havent done debug refresh function yet
+        utils.logInfo(`Debug Refreshing ${host.hostname} after deployment of apps...`);
+        await debugRefreshSplunk(host);
     }
     else if (currentActionNeeded === 'restart') {
-        utils.logDebug(`Restarting Splunk on ${host.hostname} after deployment of apps...`);
+        utils.logInfo(`Restarting Splunk on ${host.hostname} after deployment of apps...`);
         output = await callAnsibleFunction(`${commandPrefix} -m shell -a "${host.splunkRestartCommand}"`, BASE_DIRECTORY + ANSIBLE_WORKING_DIRECTORY);
-        logDebug(output.stdout);
+        logDebug(output.stdout?.replaceAll('\n', '\\n'));
     }
 
     //we finished!
-    utils.logDebug(`Finished deploying add-ons to ${host.hostname}.`);
+    utils.logInfo(`Finished deploying add-ons to ${host.hostname}.`);
 }
 
 
 
 export const deleteAddonsNoLongerManaged = async (host: Host, addons: AddOn[]) => {
-    utils.logDebug(`Beginning check to delete add-ons removed within SNM for ${host.hostname}.`);
+    utils.logInfo(`Beginning check to delete add-ons removed within SNM for ${host.hostname}.`);
     let commandPrefix = `ansible ${host.ansibleName} -i inventory.yaml -b --vault-password-file .pass `;
     //first things first, pull all the add-ons that are currently on the machine that WE manage
     let output = await callAnsibleFunction(`${commandPrefix} -m shell -a 'ls ${host.splunkHomePath}/*/managed_by_snm'`, BASE_DIRECTORY + ANSIBLE_WORKING_DIRECTORY);
 
     //if theres no stdout, there were no add-ons:
     if (output.stdout === '') {
-        utils.logDebug(`No add-ons managed by SNM on ${host.hostname}.`);
+        utils.logInfo(`No add-ons managed by SNM on ${host.hostname}.`);
         return;
     }
 
@@ -127,7 +128,7 @@ export const deleteAddonsNoLongerManaged = async (host: Host, addons: AddOn[]) =
         let indexOfHost = addons.findIndex((addon) => addon.addonFolderName === addonOnHost);
 
         if (indexOfHost === -1) {
-            utils.logDebug(`Deleting ${addonOnHost} from ${host.hostname} as it is no longer managed by SNM.`);
+            utils.logInfo(`Deleting ${addonOnHost} from ${host.hostname} as it is no longer managed by SNM.`);
             //delete the add-on
             output = await callAnsibleFunction(`${commandPrefix} -m shell -a 'rm -rf ${host.splunkHomePath}/${addonOnHost}'`, BASE_DIRECTORY + ANSIBLE_WORKING_DIRECTORY);
         }
@@ -135,7 +136,7 @@ export const deleteAddonsNoLongerManaged = async (host: Host, addons: AddOn[]) =
     }
 
     //we finished!
-    utils.logDebug(`Finished deleting add-ons removed within SNM for ${host.hostname}.`);
+    utils.logInfo(`Finished deleting add-ons removed within SNM for ${host.hostname}.`);
 
 }
 

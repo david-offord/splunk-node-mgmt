@@ -80,6 +80,12 @@ export const deleteHostFromInventory = async (host: Host) => {
     fs.writeFileSync(ANSIBLE_INVENTORY_FILE, stringify(config));
 };
 
+export const getSplunkAdminPassword = async (host: Host) => {
+    let existingContents = loadVaultContents(host.ansibleName);
+    let ansibleVaultObj: AnsibleVariableFile = parse(existingContents);
+    return ansibleVaultObj.ansible_splunk_password;
+}
+
 
 //***************************************
 //BEGIN PRIVATE FUNCTIONS

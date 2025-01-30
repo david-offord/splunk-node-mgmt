@@ -2,9 +2,10 @@ import { fail, json } from '@sveltejs/kit';
 import type { Host, ValidationObject } from "$lib/types.ts"
 import type { RequestHandler } from './$types';
 import * as df from '$lib/databaseFunctions/hostDatabaseFunctions.js' //example of importing a bunch of functions
-import * as amf from '$lib/workingDirectoryFunctions/ansibleManagementFunctions' //example of importing a bunch of functions
+import * as amf from '$lib/managementFunctions/ansibleManagementFunctions' //example of importing a bunch of functions
 import Queue from 'yocto-queue';
 import * as utils from '$lib/utils';
+import { debugRefreshSplunk } from '$lib/managementFunctions/splunkManagementFunctions';
 
 //for updating/adding host
 export const POST: RequestHandler = async function POST({ request }) {
