@@ -1,5 +1,8 @@
 import type { Handle } from '@sveltejs/kit';
+import type { Reroute } from '@sveltejs/kit';
 import sqlite3 from 'sqlite3';
+import { redirect } from '@sveltejs/kit';
+
 
 export const handle: Handle = async ({ event, resolve }) => {
 

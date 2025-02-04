@@ -5,5 +5,8 @@ export default defineConfig({
 	plugins: [sveltekit()],
 	build: {
 		minify: false
+	},
+	optimizeDeps: {
+		exclude: ['oslo']
 	}
 });
