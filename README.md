@@ -49,5 +49,5 @@ TODO:
     
     ✅ DEBUG REFRESH FUNCTION
 
-    ❌ AUTH 
+    ✅ AUTH 
 

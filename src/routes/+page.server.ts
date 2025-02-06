@@ -7,7 +7,6 @@ import { getUserByEmail } from '$lib/server/db/models/user';
 
 export const load: PageServerLoad = async ({ locals }) => {
 
-    getUserByEmail('hello');
     // Since `sqlite3` is a callback based system, we'll want to use a 
     // promise to return the data in an async manner.
     let rows = await df.getAllHosts();

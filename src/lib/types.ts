@@ -73,3 +73,8 @@ export interface AnsibleVariableFile {
     ansible_become_password: string,
     ansible_splunk_password: string,
 }
+
+export interface LoginModel {
+    username: string,
+    password: string
+}
