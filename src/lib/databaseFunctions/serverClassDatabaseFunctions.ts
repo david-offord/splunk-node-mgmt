@@ -1,4 +1,4 @@
-import type { ServerClasses, HostJoinServerClass } from "$lib/types.ts"
+import type { ServerClasses, HostJoinServerClass, AddonJoinServerClass } from "$lib/types.ts"
 import sqlite3 from 'sqlite3';
 import type { Database, Statement, RunResult } from 'sqlite3'
 import db from '$lib/server/db';
@@ -33,6 +33,27 @@ export const getAllServerClassesByHosts = async () => {
             INNER JOIN hosts h ON sch.hostId = h.id;`;
 
         db.all<HostJoinServerClass>(query, (err: Error | null, rows: HostJoinServerClass[]) => {
+            if (err) {
+                reject(err);
+                return;
+            }
+            resolve(rows)
+        })
+    });
+
+    const rows = await loadDataPromise;
+    return rows;
+}
+
+//gets all server classes by host, with the host definitions
+export const getAllServerClassesByAddons = async () => {
+    const loadDataPromise = new Promise<AddonJoinServerClass[]>((resolve, reject) => {
+        const query = `SELECT sc.id AS serverClassId, a.*
+            FROM serverClasses sc
+            INNER JOIN serverClassByAddon sca ON sca.serverClassId = sc.id
+            INNER JOIN addons a ON sca.addonId = a.id;`;
+
+        db.all<AddonJoinServerClass>(query, (err: Error | null, rows: AddonJoinServerClass[]) => {
             if (err) {
                 reject(err);
                 return;
@@ -102,6 +123,53 @@ export const updateServerClassHosts = async (serverClass: ServerClasses) => {
         loadDataPromise = new Promise<void>((resolve, reject) => {
             //run the insert
             stmt.run(serverClass.id, serverClass.hostsAssigned[i].id, (err: Error | null) => {
+                if (err) {
+                    reject();
+                    return;
+                }
+                resolve()
+            });
+        });
+        insertPromises.push(loadDataPromise);
+    }
+    await Promise.all(insertPromises);
+}
+
+
+export const updateServerClassAddons = async (serverClass: ServerClasses) => {
+    //so first of all, delete all the existing entries for serverclass -> host
+    let loadDataPromise = new Promise<void>((resolve, reject) => {
+        const stmt = db.prepare(`DELETE FROM serverClassByAddon
+        WHERE serverClassId = ?;`);
+
+        stmt.run(serverClass.id, (err: Error | null) => {
+            if (err) {
+                reject();
+                return;
+            }
+            resolve()
+        });
+    });
+
+    //await the delete
+    await loadDataPromise;
+
+    //now, run the insert for every host
+    let query = `INSERT INTO serverClassByAddon
+            (serverClassId, addonId)
+            VALUES
+            (?,?)`
+
+    //prep the statement
+    const stmt = db.prepare(query);
+
+    let insertPromises: Promise<void>[] = [];
+
+    //do it for every host assigned
+    for (let i = 0; i < serverClass.addonsAssigned.length; i++) {
+        loadDataPromise = new Promise<void>((resolve, reject) => {
+            //run the insert
+            stmt.run(serverClass.id, serverClass.addonsAssigned[i].id, (err: Error | null) => {
                 if (err) {
                     reject();
                     return;

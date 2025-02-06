@@ -1,5 +1,5 @@
 <script lang="ts">
-    import type { Host, ServerClasses, ValidationObject } from "$lib/types";
+    import type { AddOn, Host, ServerClasses, ValidationObject } from "$lib/types";
     import type { PageServerData } from "./$types";
     import type { Modal } from "bootstrap";
     import type * as bootstrap from "bootstrap";
@@ -10,17 +10,23 @@
     //get the hosts from the db
     let { data, form }: { data: PageServerData; form: FormData } = $props();
     let serverClasses = $state(data.serverClasses);
+
+    //for modal addon/host selection
     let possibleHosts = $state(data.hosts);
     let unselectedHosts = $state(data.hosts);
     let selectedHosts: Host[] = $state([]);
+    let possibleAddons = $state(data.addons);
+    let unselectedAddons = $state(data.addons);
+    let selectedAddons: AddOn[] = $state([]);
 
     //get the modal instance
     let hostModal: Modal = null;
     let newServerClassModal: Modal = null;
     let deleteServerClassModal: Modal = null;
+    let editingHosts = $state(true);
 
     //current editing server class
-    let currentEditingServerClass: ServerClasses = null;
+    let currentEditingServerClass: ServerClasses = $state();
     let deleteServerClassObject: ServerClasses = $state();
 
     //basic variables for display on webpage
@@ -38,6 +44,7 @@
     //toggle modal
     function showHideModal(show: boolean) {
         if (hostModal == null) {
+            // @ts-ignore
             hostModal = new bootstrap.Modal(document.getElementById("serverClassModal"));
         }
 
@@ -51,6 +58,7 @@
     //toggle modal
     function showHideNewModal(show: boolean) {
         if (newServerClassModal == null) {
+            // @ts-ignore
             newServerClassModal = new bootstrap.Modal(document.getElementById("newServerClassModal"));
         }
 
@@ -66,6 +74,7 @@
         deleteServerClassObject = serverClass;
 
         if (deleteServerClassModal == null) {
+            // @ts-ignore
             deleteServerClassModal = new bootstrap.Modal(document.getElementById("deleteServerClassModal"));
         }
 
@@ -83,10 +92,15 @@
     }
 
     //open modal with existing server class
-    function showModalHostExistingServerClass(serverClass: ServerClasses) {
+    function showModalHostExistingServerClass(serverClass: ServerClasses, forHosts = true) {
+        //set which set we are editing
+        editingHosts = forHosts;
+
         //null out the arrays
         selectedHosts = [];
         unselectedHosts = [];
+        selectedAddons = [];
+        unselectedAddons = [];
 
         //save the class we're currrently editing for save later
         currentEditingServerClass = serverClass;
@@ -101,7 +115,17 @@
             }
         }
 
-        editTitle = "Manage Server Class " + serverClass.name + "'s hosts";
+        //filter out the elements in the full list into the 2 arrays
+        for (let pa of possibleAddons) {
+            //if the host is not in the host assigned array, add it to unselected
+            if (serverClass.addonsAssigned.findIndex((x) => x.id == pa.id) === -1) {
+                unselectedAddons.push(pa);
+            } else {
+                selectedAddons.push(pa);
+            }
+        }
+
+        editTitle = "Manage Server Class " + serverClass.name + "'s " + (forHosts ? "Hosts" : "Addons");
         showHideModal(true);
     }
 
@@ -109,7 +133,8 @@
     async function saveModalChanges() {
         //get selected values
         // @ts-ignore
-        let selectedHosts: Host[] = [...document.getElementById("selectedHostSelect").children].map((x: HTMLElement) => {
+        let selectedEntries: any[] = [...document.getElementById("selectedHostSelect").children].map((x: HTMLElement) => {
+            // @ts-ignore
             return { id: x.value };
         });
 
@@ -117,16 +142,14 @@
         let serverClassForApi: ServerClasses = {
             id: currentEditingServerClass.id,
             name: currentEditingServerClass.name,
-            hostsAssigned: selectedHosts,
+            hostsAssigned: editingHosts ? selectedEntries : null,
+            addonsAssigned: editingHosts ? null : selectedEntries,
         };
 
         //send the request
         const response = await fetch($page.url.pathname, {
             method: "PATCH",
-            body: JSON.stringify({
-                serverClass: serverClassForApi,
-                updateWhich: "hosts",
-            }),
+            body: JSON.stringify(serverClassForApi),
         });
 
         await loadServerClasses();
@@ -160,20 +183,32 @@
         //get the values the user selected
         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         // @ts-ignore
-        let moveHosts: number[] = [...document.getElementById("selectedHostSelect").selectedOptions].map((x) => x.value);
+        let moveItems: number[] = [...document.getElementById("selectedHostSelect").selectedOptions].map((x) => x.value);
 
         //now, search the selected hosts, and pop any movehost values and put them into unselected
-        for (let mh of moveHosts) {
+        for (let mi of moveItems) {
             //get the host and index first
-            let h: Host = null;
+            let h: any = null;
             let index: number = 0;
 
-            for (let i = 0; i < selectedHosts.length; i++) {
+            let selectedItems: any = [];
+            let unselectedItems: any = [];
+
+            //depending on what we are editing, reference that array here
+            if (editingHosts) {
+                selectedItems = selectedHosts;
+                unselectedItems = unselectedHosts;
+            } else {
+                selectedItems = selectedAddons;
+                unselectedItems = unselectedAddons;
+            }
+
+            for (let i = 0; i < selectedItems.length; i++) {
                 //if it matches
-                if (selectedHosts[i].id == mh) {
+                if (selectedItems[i].id == mi) {
                     //save that info
                     index = i;
-                    h = selectedHosts[i];
+                    h = selectedItems[i];
                     //and break
                     break;
                 }
@@ -185,9 +220,9 @@
             }
 
             //remove it from selected
-            selectedHosts.splice(index, 1);
+            selectedItems.splice(index, 1);
             //add it to the unselected ones
-            unselectedHosts.push(h);
+            unselectedItems.push(h);
         }
     }
 
@@ -196,20 +231,33 @@
         //get the values the user selected
         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         // @ts-ignore
-        let moveHosts: number[] = [...document.getElementById("unselectedHostSelect").selectedOptions].map((x) => x.value);
+        let moveItems: number[] = [...document.getElementById("unselectedHostSelect").selectedOptions].map((x) => x.value);
 
         //now, search the selected hosts, and pop any movehost values and put them into unselected
-        for (let mh of moveHosts) {
+        for (let mi of moveItems) {
             //get the host and index first
-            let h: Host = null;
+            let h: any = null;
             let index: number = 0;
 
-            for (let i = 0; i < unselectedHosts.length; i++) {
+            let selectedItems: any = [];
+            let unselectedItems: any = [];
+
+            //depending on what we are editing, reference that array here
+            if (editingHosts) {
+                selectedItems = selectedHosts;
+                unselectedItems = unselectedHosts;
+            } else {
+                selectedItems = selectedAddons;
+                unselectedItems = unselectedAddons;
+            }
+
+            //for all unselected items...
+            for (let i = 0; i < unselectedItems.length; i++) {
                 //if it matches
-                if (unselectedHosts[i].id == mh) {
+                if (unselectedItems[i].id == mi) {
                     //save that info
                     index = i;
-                    h = unselectedHosts[i];
+                    h = unselectedItems[i];
                     //and break
                     break;
                 }
@@ -221,9 +269,9 @@
             }
 
             //remove it from selected
-            unselectedHosts.splice(index, 1);
+            unselectedItems.splice(index, 1);
             //add it to the unselected ones
-            selectedHosts.push(h);
+            selectedItems.push(h);
         }
     }
 </script>
@@ -273,8 +321,14 @@
                         </button>
                     </td>
                     <td>
-                        2
-                        <button class="ms-3" aria-label="Edit Assigned Hosts">
+                        {serverclass.addonsAssigned.length}
+                        <button
+                            class="ms-3"
+                            aria-label="Edit Assigned Hosts"
+                            onclick={() => {
+                                showModalHostExistingServerClass(serverclass, false);
+                            }}
+                        >
                             <i class="bi bi-pencil"></i>
                         </button>
                     </td>
@@ -303,7 +357,7 @@
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="exampleModalLabel">{editTitle}</h5>
+                <h5 class="modal-title" id="exampleModalLabel">Manage Server Class {currentEditingServerClass?.name}'s {editingHosts ? "Hosts" : "Addons"}</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
@@ -311,9 +365,15 @@
                     <div class="row">
                         <div class="col-5">
                             <select id="unselectedHostSelect" multiple style="height: 30em; width: 100%">
-                                {#each unselectedHosts as ps}
-                                    <option value={ps.id}>{ps.hostname}</option>
-                                {/each}
+                                {#if editingHosts}
+                                    {#each unselectedHosts as ps}
+                                        <option value={ps.id}>{ps.hostname}</option>
+                                    {/each}
+                                {:else}
+                                    {#each unselectedAddons as as}
+                                        <option value={as.id}>{as.displayName}</option>
+                                    {/each}
+                                {/if}
                             </select>
                         </div>
                         <div class="col-2 d-flex align-items-center justify-content-center">
@@ -331,9 +391,15 @@
                         </div>
                         <div class="col-5">
                             <select id="selectedHostSelect" multiple style="height: 30em;  width: 100%">
-                                {#each selectedHosts as ps}
-                                    <option value={ps.id}>{ps.hostname}</option>
-                                {/each}
+                                {#if editingHosts}
+                                    {#each selectedHosts as ps}
+                                        <option value={ps.id}>{ps.hostname}</option>
+                                    {/each}
+                                {:else}
+                                    {#each selectedAddons as as}
+                                        <option value={as.id}>{as.displayName}</option>
+                                    {/each}
+                                {/if}
                             </select>
                         </div>
                     </div>

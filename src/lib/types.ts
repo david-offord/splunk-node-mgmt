@@ -51,7 +51,7 @@ export interface ServerClasses {
     id: number,
     name: string,
     hostsAssigned?: Array<Host>,
-    addonsAssigned?: Array<number>,
+    addonsAssigned?: Array<AddOn>,
 }
 
 export interface AddOn {

@@ -3,6 +3,7 @@ import type { Host, ServerClasses } from "$lib/types.ts"
 import type { RequestHandler } from './$types';
 import * as hdf from '$lib/databaseFunctions/hostDatabaseFunctions.js';
 import * as scdf from '$lib/databaseFunctions/serverClassDatabaseFunctions';
+import { isNullOrUndefined } from '$lib/utils';
 
 //for updating/adding server classes
 export const GET: RequestHandler = async function GET({ request }) {
@@ -20,6 +21,19 @@ export const GET: RequestHandler = async function GET({ request }) {
         allServerClassesByHosts[scbh.serverClassId].push(scbh);
     }
 
+    //get a list of all hosts and their server classes
+    let serverClassesByAddon = await scdf.getAllServerClassesByAddons();
+
+    //basically take all the hosts and sort them by server class id 
+    let allServerClassesByAddons: any = {};
+    for (let scba of serverClassesByAddon) {
+        if (typeof allServerClassesByAddons[scba.serverClassId] == 'undefined') {
+            allServerClassesByAddons[scba.serverClassId] = [];
+        }
+        allServerClassesByAddons[scba.serverClassId].push(scba);
+    }
+
+
     //for each server class, get that information
     for (let sc of serverClasses) {
         if (typeof allServerClassesByHosts[sc.id] == 'undefined') {
@@ -27,6 +41,14 @@ export const GET: RequestHandler = async function GET({ request }) {
         }
         else {
             sc.hostsAssigned = allServerClassesByHosts[sc.id];
+        }
+
+        //do the same for addons
+        if (typeof allServerClassesByAddons[sc.id] == 'undefined') {
+            sc.addonsAssigned = [];
+        }
+        else {
+            sc.addonsAssigned = allServerClassesByAddons[sc.id];
         }
     }
 
@@ -45,15 +67,16 @@ export const POST: RequestHandler = async function POST({ request }) {
 //for updating serverclass
 export const PATCH: RequestHandler = async function PATH({ request }) {
     //get the serverclass and other info from the request
-    let apiData = await request.json();
-    let serverClass: ServerClasses = apiData['serverClass'];
-    let updateWhich: string = apiData['updateWhich'];
+    let apiData = await request.json() as ServerClasses;
 
     //save a variable for the return later
     try {
         //call the update function
-        if (updateWhich === "hosts") {
-            await scdf.updateServerClassHosts(serverClass);
+        if (isNullOrUndefined(apiData.hostsAssigned) === false) {
+            await scdf.updateServerClassHosts(apiData);
+        }
+        if (isNullOrUndefined(apiData.addonsAssigned) === false) {
+            await scdf.updateServerClassAddons(apiData);
         }
 
     }

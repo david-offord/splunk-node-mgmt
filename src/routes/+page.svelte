@@ -15,6 +15,7 @@
 
     //get the modal instance
     let hostModal: Modal = null;
+    let deleteModal: Modal = null;
 
     //declare vars for modal
     let modalHost: Host = null;
@@ -42,6 +43,7 @@
 
     //used for validation later
     let modalValidation: ValidationObject = $state();
+    let deleteHostObject: Host = $state();
 
     function searchHosts() {
         visibleHosts = hosts.filter((x) => x.hostname.toLocaleLowerCase().includes(searchString.toLocaleLowerCase()));
@@ -187,6 +189,7 @@
         const response = await fetch($page.url.pathname, { method: "DELETE", body: JSON.stringify(selectedHost) });
         await response.json();
         await getHosts();
+        deleteModal.hide();
     }
 
     async function redeployAddOns(selectedHost: Host) {
@@ -306,6 +309,14 @@
         sortArraysForDisplay();
     }
 
+    //show the modal for deleting the host
+    function confirmHostDeletion(selectedHost: Host) {
+        deleteHostObject = selectedHost;
+
+        deleteModal = new bootstrap.Modal(document.getElementById("deleteHostModal"));
+        deleteModal.show();
+    }
+
     //Add all listeners
     onMount(() => {
         const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
@@ -369,7 +380,7 @@
                                 <button id="RedeployAddons_{host.id}" aria-label="Redeploy Add-ons" data-bs-toggle="tooltip" data-placement="top" title="Redeploy Add-ons" onclick={() => redeployAddOns(host)}>
                                     <i class="bi bi-arrow-up-right"></i>
                                 </button>
-                                <button aria-label="Delete Host" data-bs-toggle="tooltip" data-placement="top" title="Delete Host" onclick={() => deleteHost(host)}>
+                                <button aria-label="Delete Host" data-bs-toggle="tooltip" data-placement="top" title="Delete Host" onclick={() => confirmHostDeletion(host)}>
                                     <i class="bi bi-trash"></i>
                                 </button>
                             </td>
@@ -498,6 +509,35 @@
                         saveHostValues(null);
                     }}>Save changes</button
                 >
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="deleteHostModal" tabindex="-1" aria-labelledby="deleteHostModal" aria-hidden="true">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="exampleModalLabel">Confirm Deletion of {deleteHostObject?.hostname}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form>
+                    <div class="row">
+                        <div class="col-6">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        </div>
+                        <div class="col-6">
+                            <button
+                                type="submit"
+                                class="btn btn-danger"
+                                onclick={() => {
+                                    deleteHost(deleteHostObject);
+                                }}>Confirm</button
+                            >
+                        </div>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
