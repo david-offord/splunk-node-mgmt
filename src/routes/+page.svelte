@@ -45,9 +45,9 @@
     let modalValidation: ValidationObject = $state();
     let deleteHostObject: Host = $state();
 
-    function searchHosts() {
-        visibleHosts = hosts.filter((x) => x.hostname.toLocaleLowerCase().includes(searchString.toLocaleLowerCase()));
-    }
+    let currentPage = $state(0);
+    let totalHostCount = $state(data.hostCount);
+    let lastSearchParam = "";
 
     function sortArraysForDisplay() {
         unselectedServerClasses = unselectedServerClasses.sort((a, b) => {
@@ -143,9 +143,25 @@
 
     //get all hosts from db
     async function getHosts() {
-        const response = await fetch($page.url.pathname, { method: "GET" });
-        hosts = await response.json();
-        searchHosts();
+        //check if the search parameter has changed
+        if (lastSearchParam !== searchString) {
+            //if it is, reset it back to the first page
+            currentPage = 0;
+        }
+        //set it for later
+        lastSearchParam = searchString;
+
+        //buiild all the parameters
+        let query = `?page=${currentPage}&search=${encodeURIComponent(searchString)}`;
+
+        //call to get the list again
+        const response = await fetch($page.url.pathname.slice(0, -1) + query, { method: "GET" });
+
+        //get the list of hosts and total count
+        let returnVal = await response.json();
+        console.log(returnVal);
+        hosts = returnVal.hosts;
+        totalHostCount = returnVal.hostCount;
     }
 
     //call an api
@@ -350,10 +366,10 @@
                 <input
                     id="searchTextBox"
                     class="form-control"
-                    bind:value={searchString}
-                    oninput={() => {
-                        searchHosts();
+                    onchange={() => {
+                        getHosts();
                     }}
+                    bind:value={searchString}
                 />
             </div>
         </div>
@@ -368,7 +384,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {#each visibleHosts as host}
+                    {#each hosts as host}
                         <tr>
                             <td>{host.hostname}</td>
                             <td>{host.ipAddress}</td>
@@ -388,6 +404,30 @@
                     {/each}
                 </tbody>
             </table>
+        </div>
+        <div class="col-md-4 offset-md-8 col-sm-12">
+            <button
+                class="btn btn-link mat-green float-end"
+                onclick={async () => {
+                    currentPage++;
+                    if (currentPage > Math.ceil(totalHostCount / 10) - 1) {
+                        currentPage = Math.ceil(totalHostCount / 10) - 1;
+                    }
+                    await getHosts();
+                }}>&gt;</button
+            >
+            <button class="btn btn-link mat-green float-end">{currentPage + 1} of {Math.ceil(totalHostCount / 10)}</button>
+            <button
+                class="btn btn-link mat-green float-end"
+                onclick={async () => {
+                    currentPage--;
+                    if (currentPage < 0) {
+                        currentPage = 0;
+                    }
+
+                    await getHosts();
+                }}>&lt;</button
+            >
         </div>
     </div>
 </div>

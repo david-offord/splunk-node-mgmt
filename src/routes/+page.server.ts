@@ -3,19 +3,23 @@ import type { Host } from "$lib/types.ts"
 import * as scdf from "$lib/databaseFunctions/serverClassDatabaseFunctions"
 import * as df from '$lib/databaseFunctions/hostDatabaseFunctions.js' //example of importing a bunch of functions
 import { isNullOrUndefined } from '$lib/utils';
-import { getUserByEmail } from '$lib/server/db/models/user';
+import { getHosts, insertHost } from '$lib/server/db/models/hosts';
+import { getServerClasses, getServerClassByHosts } from '$lib/server/db/models/serverClass';
 
 export const load: PageServerLoad = async ({ locals }) => {
-
-    // Since `sqlite3` is a callback based system, we'll want to use a 
-    // promise to return the data in an async manner.
-    let rows = await df.getAllHosts();
+    //GET HOST INFORMATION
+    let rowInformation = await getHosts();
+    let rows = rowInformation.rows as Host[];
+    let rowCount = rowInformation.totalRows;
 
     //get all of the server classes 
-    let allServerClasses = await scdf.getAllServerClasses();
+    let allServerClassesInfo = await getServerClasses();
+    let allServerClasses = allServerClassesInfo.rows;
+
+    let allHostIds = rows.map(x => x.id);
 
     //get a list of host -> server classes
-    let serverclassesByHost = await df.getServerClassByHosts();
+    let serverclassesByHost = await getServerClassByHosts(allHostIds);
 
     //build an object of host -> server classes
     let hostsByServerClass: any = {};
@@ -39,6 +43,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 
     return {
         hosts: rows,
+        hostCount: rowCount,
         allPossibleServerClasses: allServerClasses
     };
 };

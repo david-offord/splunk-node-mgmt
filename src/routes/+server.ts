@@ -7,16 +7,20 @@ import * as scdf from "$lib/databaseFunctions/serverClassDatabaseFunctions"
 import * as isIp from 'is-ip';
 import * as net from 'net';
 import { isNullOrUndefined } from '$lib/utils';
+import { getHosts } from '$lib/server/db/models/hosts';
+import { getServerClassByHosts } from '$lib/server/db/models/serverClass';
 
 //for updating/adding host
-export const GET: RequestHandler = async function GET({ request }) {
+export const GET: RequestHandler = async function GET({ request, url }) {
+    //GET HOST INFORMATION
+    let rowInformation = await getHosts(url.searchParams.get('search'), parseInt(url.searchParams.get('page')));
+    let rows = rowInformation.rows as Host[];
+    let rowCount = rowInformation.totalRows;
 
-    let rows = await df.getAllHosts();
-    //get all of the server classes 
-    let allServerClasses = await scdf.getAllServerClasses();
+    let allHostIds = rows.map(x => x.id);
 
     //get a list of host -> server classes
-    let serverclassesByHost = await df.getServerClassByHosts();
+    let serverclassesByHost = await getServerClassByHosts(allHostIds);
 
     //build an object of host -> server classes
     let hostsByServerClass: any = {};
@@ -37,7 +41,10 @@ export const GET: RequestHandler = async function GET({ request }) {
             host.serverClassesAssigned = hostsByServerClass[host.id];
     }
 
-    return json(rows);
+    return json({
+        hosts: rows,
+        hostCount: rowCount,
+    });
 }
 
 //for updating/adding host

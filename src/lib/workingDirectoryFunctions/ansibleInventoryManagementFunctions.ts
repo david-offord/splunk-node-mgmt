@@ -140,7 +140,7 @@ function saveVaultContents(ansibleName: string, variableFile: AnsibleVariableFil
     fs.writeFileSync(file, stringify(variableFile));
 
     let code = child_process.execSync(`ansible-vault encrypt ${file} --vault-password-file ${ANSIBLE_PASS_FILE_LOCATION}`)
-    console.log(code.toString());
+    return code;
 }
 
 function deleteVaultFile(ansibleName: string) {
