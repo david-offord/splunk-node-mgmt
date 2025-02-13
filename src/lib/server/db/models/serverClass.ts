@@ -33,6 +33,11 @@ const insertNewServerClass = async (serverClassName: string) => {
 }
 
 const deleteServerClass = async (serverClassId: number) => {
+    //delete all entries of this from the add-on by server class
+    await db.delete(serverClassByAddon).where(eq(serverClassByAddon.serverClassId, serverClassId))
+    //delete all entries of this from the host  by server class
+    await db.delete(serverClassByHost).where(eq(serverClassByHost.serverClassId, serverClassId))
+
     //delete it
     await db.delete(serverClasses).where(eq(serverClasses.id, serverClassId));
 }
@@ -44,6 +49,17 @@ const getServerClassByHosts = async (hosts: number[]) => {
     })
         .from(serverClassByHost)
         .where(inArray(serverClassByHost.hostId, hosts))
+
+    return allRows;
+}
+
+const getServerClassByAddon = async (addons: number[]) => {
+    let allRows = await db.select({
+        id: serverClassByAddon.serverClassId,
+        addonId: serverClassByAddon.addonId,
+    })
+        .from(serverClassByAddon)
+        .where(inArray(serverClassByAddon.addonId, addons))
 
     return allRows;
 }
@@ -88,6 +104,7 @@ export {
     getServerClasses,
     insertNewServerClass,
     getServerClassByHosts,
+    getServerClassByAddon,
     updateServerClassAddons,
     updateServerClassHosts,
     deleteServerClass

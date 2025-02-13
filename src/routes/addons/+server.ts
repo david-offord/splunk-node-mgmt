@@ -1,18 +1,23 @@
 import { fail, json } from '@sveltejs/kit';
-import type { AddOn, ServerClasses, ServerClassJoinAddon, AddonValidationObject } from "$lib/types.ts"
+import type { AddOn, AddonValidationObject } from "$lib/types.ts"
 import type { RequestHandler } from './$types';
 import { FileSaveResults } from "$lib/enums"
 
-import * as aodf from "$lib/databaseFunctions/addonDatabaseFunctions"
 import * as aoff from "$lib/workingDirectoryFunctions/addOnFileFunctions"
 import { isNullOrUndefined } from '$lib/utils';
-import { fstat } from 'fs';
+import { deleteAddon, getAllAddons, getSingleAddon, insertNewAddon, updateAddon } from '$lib/server/db/models/addons';
+import { getServerClassByAddon } from '$lib/server/db/models/serverClass';
 
 
 //for getting all addons
 export const GET: RequestHandler = async function GET({ request }) {
-    let addons: Array<AddOn> = await aodf.getAllAddons();
-    let serverClassesByAddon: Array<ServerClassJoinAddon> = await aodf.getAddonsByServerClass();
+    //get all addons
+    let addonsInformation = await getAllAddons();
+    let addons: Array<AddOn> = addonsInformation.rows;
+
+    //make an array of only ids for the next function
+    let addonIds = addons.map(x => x.id);
+    let serverClassesByAddon = await getServerClassByAddon(addonIds);
 
     addons = addons.sort((a, b) => {
         var textA = a.displayName.toUpperCase();
@@ -20,9 +25,6 @@ export const GET: RequestHandler = async function GET({ request }) {
         return (textA < textB) ? -1 : (textA > textB) ? 1 : 0;
     });
 
-    addons.forEach(x => {
-        x.appFolderName = x.addonFileLocation;
-    });
 
     //get all the server classes into 1 object
     let allServerClassesByAddons: any = {};
@@ -30,7 +32,7 @@ export const GET: RequestHandler = async function GET({ request }) {
         if (typeof allServerClassesByAddons[scba.addonId] == 'undefined') {
             allServerClassesByAddons[scba.addonId] = [];
         }
-        allServerClassesByAddons[scba.addonId].push(scba.addonId);
+        allServerClassesByAddons[scba.addonId].push(scba.id);
     }
 
     //for each server class, get that information
@@ -118,7 +120,7 @@ export const POST: RequestHandler = async function POST({ request }) {
     }
 
     //save to db
-    let newId = await aodf.addUpdateAddon(addonPayload);
+    let newId = await insertNewAddon(addonPayload);
     return json(newId);
 }
 
@@ -130,7 +132,7 @@ export const PATCH: RequestHandler = async function PATH({ request }) {
     let error = false;
     let fileUploadedName = '';//set if the file is okay to save
 
-    let existingAddonDefinition = await aodf.getSingleAddon(newAddon.get('id'));
+    let existingAddonDefinition = await getSingleAddon(newAddon.get('id'));
 
     //if no addon already exists, return a 500
     if (existingAddonDefinition === null) {
@@ -194,7 +196,6 @@ export const PATCH: RequestHandler = async function PATH({ request }) {
     //actyally save the file
     let result = await aoff.saveAddonFromFormData(formdata);
 
-
     //see if we need to update the name
     if (isNullOrUndefined(fileUploadedName) === false) {
         addonPayload.addonFileLocation = fileUploadedName;
@@ -209,9 +210,9 @@ export const PATCH: RequestHandler = async function PATH({ request }) {
     }
 
     //save to db
-    let newId = await aodf.addUpdateAddon(addonPayload);
+    let newId = await updateAddon(addonPayload);
 
-    //delete the old addon
+    //delete the old addon files
     await aoff.deleteAddon(existingAddonDefinition);
 
     return json(newId);
@@ -222,8 +223,8 @@ export const DELETE: RequestHandler = async function DELETE({ request }) {
     let addon: AddOn = await request.json();
 
     //delete the db entry
-    let currAddonDefinition = await aodf.getSingleAddon(addon.id);
-    await aodf.deleteSingleAddon(addon.id);
+    let currAddonDefinition = await getSingleAddon(addon.id);
+    await deleteAddon(addon.id);
 
     //delete the file
     await aoff.deleteAddon(currAddonDefinition);

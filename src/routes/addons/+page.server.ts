@@ -1,16 +1,20 @@
 import type { PageServerLoad } from './$types';
-import type { AddOn, Host, ServerClasses, ServerClassJoinAddon } from "$lib/types.ts"
-import * as aodf from "$lib/databaseFunctions/addonDatabaseFunctions"
-import * as scdf from "$lib/databaseFunctions/serverClassDatabaseFunctions"
-import * as df from '$lib/databaseFunctions/hostDatabaseFunctions.js' //example of importing a bunch of functions
+import type { AddOn } from "$lib/types.ts"
+import { getServerClassByAddon, getServerClasses } from '$lib/server/db/models/serverClass';
+import { getAllAddons } from '$lib/server/db/models/addons';
 
 export const load: PageServerLoad = async ({ locals }) => {
+    //get all addons
+    let addonsInformation = await getAllAddons();
+    let addons: Array<AddOn> = addonsInformation.rows;
 
-    let addons: Array<AddOn> = await aodf.getAllAddons();
-    let serverClassesByAddon: Array<ServerClassJoinAddon> = await aodf.getAddonsByServerClass();
+    //make an array of only ids for the next function
+    let addonIds = addons.map(x => x.id);
+    let serverClassesByAddon = await getServerClassByAddon(addonIds);
 
-
-    let allServerClasses = await scdf.getAllServerClasses()
+    //get all server classes
+    let serverClassInformation = await getServerClasses();
+    let allServerClasses = serverClassInformation.rows;
 
     addons = addons.sort((a, b) => {
         var textA = a.displayName.toUpperCase();
@@ -18,9 +22,6 @@ export const load: PageServerLoad = async ({ locals }) => {
         return (textA < textB) ? -1 : (textA > textB) ? 1 : 0;
     });
 
-    addons.forEach(x => {
-        x.appFolderName = x.addonFileLocation;
-    });
 
     //get all the server classes into 1 object
     let allServerClassesByAddons: any = {};
