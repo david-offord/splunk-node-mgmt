@@ -2,6 +2,7 @@ import { fail, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import type { AnsiblePlaybookModel } from '$lib/types';
 import { createAnsiblePlaybook, deleteAnsiblePlaybook, getAnsiblePlaybooks, getSingleAnsiblePlaybook, updateAnsiblePlaybook } from '$lib/server/db/models/ansiblePlaybooks';
+import { createJob } from '$lib/server/db/models/jobs';
 
 export const GET: RequestHandler = async function GET({ request, url, locals }) {
     let playbooks = await getAnsiblePlaybooks() as AnsiblePlaybookModel[];

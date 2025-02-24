@@ -7,25 +7,32 @@ import * as amf from '$lib/managementFunctions/ansibleManagementFunctions' //exa
 import * as utils from '$lib/utils';
 import { getAllAddonsForHost, getHosts, getSingleHost } from '$lib/server/db/models/hosts';
 import { log } from 'console';
+import { addJobLog, completeJob, createJob } from '$lib/server/db/models/jobs';
 
 //for updating/adding host
-export const POST: RequestHandler = async function POST({ request }) {
+export const POST: RequestHandler = async function POST({ request, locals }) {
     let host = await request.json() as Host;
+
 
     //get stuff from db
     let fullHost = await getSingleHost(host.id);
     let allAddonsForHost = await getAllAddonsForHost(host.id);
 
+    //create job for logging
+    let logJobId = await createJob(`Deploying Addons for single host ${host.hostname}; hostname=${host.hostname}; id=${host.id}; numberOfAddons=${allAddonsForHost.length}`, locals.user.id);
+
     //call the function that will do this
-    await amf.deployAddonsToHost(fullHost, allAddonsForHost);
+    await amf.deployAddonsToHost(fullHost, allAddonsForHost, logJobId);
 
     //delete any old add-ons we dont manage now
-    await amf.deleteAddonsNoLongerManaged(fullHost, allAddonsForHost);
+    await amf.deleteAddonsNoLongerManaged(fullHost, allAddonsForHost, logJobId);
 
+    //mark job completed
+    await completeJob(logJobId);
     return json({ host: host });
 }
 
-//for updating/adding host
+//for deploying all hosts
 export const PATCH: RequestHandler = async function POST({ request }) {
     //get stuff from db
     let allHostInfo = await getHosts();

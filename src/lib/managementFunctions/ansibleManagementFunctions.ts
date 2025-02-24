@@ -12,7 +12,7 @@ const ANSIBLE_WORKING_DIRECTORY = '/workingdirectory/ansible';
 const ANSIBLE_ADDONS_DIRECTORY = '/workingdirectory/addons';
 const TEMP_EXTRACT_LOCATION = '/workingdirectory/temp';
 
-export const deployAddonsToHost = async (host: Host, addons: AddOn[]) => {
+export const deployAddonsToHost = async (host: Host, addons: AddOn[], logJobId: number = null) => {
     //define the folder to extract to
     let extract_folder = path.join(BASE_DIRECTORY, TEMP_EXTRACT_LOCATION, new Date().getTime().toString());
     //make the folder
@@ -47,7 +47,7 @@ export const deployAddonsToHost = async (host: Host, addons: AddOn[]) => {
             fs.writeFileSync(path.join(extract_folder, addon.addonFolderName, 'managed_by_snm'), 'This file is managed by the Splunk Node Management Tool.Do not modify or delete.\n');
         }
         catch (ex) {
-            utils.logError(`Error occurred deploying add-on ${addon?.displayName} to ${host.hostname}. Exception: ${ex}`);
+            utils.logError(`Error occurred deploying add-on ${addon?.displayName} to ${host.hostname}. Exception: ${ex}`, logJobId);
         }
 
     }
@@ -87,37 +87,42 @@ export const deployAddonsToHost = async (host: Host, addons: AddOn[]) => {
 
     //restart/debug refresh if applicable
     if (currentActionNeeded === 'refresh') {
-        utils.logInfo(`Debug Refreshing ${host.hostname} after deployment of apps...`);
+        utils.logInfo(`Debug Refreshing ${host.hostname} after deployment of apps...`, logJobId);
         await debugRefreshSplunk(host);
     }
     else if (currentActionNeeded === 'restart') {
-        utils.logInfo(`Restarting Splunk on ${host.hostname} after deployment of apps...`);
+        utils.logInfo(`Restarting Splunk on ${host.hostname} after deployment of apps...`, logJobId);
         output = await callAnsibleFunction(`${commandPrefix} -m shell -a "${host.splunkRestartCommand}"`, BASE_DIRECTORY + ANSIBLE_WORKING_DIRECTORY);
         logDebug(output.stdout?.replaceAll('\n', '\\n'));
     }
 
     //we finished!
-    utils.logInfo(`Finished deploying add-ons to ${host.hostname}.`);
+    utils.logInfo(`Finished deploying add-ons to ${host.hostname}.`, logJobId);
 }
 
 
 
-export const deleteAddonsNoLongerManaged = async (host: Host, addons: AddOn[]) => {
-    utils.logInfo(`Beginning check to delete add-ons removed within SNM for ${host.hostname}.`);
+export const deleteAddonsNoLongerManaged = async (host: Host, addons: AddOn[], logJobId: number = null) => {
+    utils.logInfo(`Beginning check to delete add-ons removed within SNM for ${host.hostname}.`, logJobId);
     let commandPrefix = `ansible ${host.ansibleName} -i inventory.yaml -b --vault-password-file .pass `;
     //first things first, pull all the add-ons that are currently on the machine that WE manage
     let output = await callAnsibleFunction(`${commandPrefix} -m shell -a 'ls ${host.splunkHomePath}/*/managed_by_snm'`, BASE_DIRECTORY + ANSIBLE_WORKING_DIRECTORY);
 
     //if theres no stdout, there were no add-ons:
     if (output.stdout === '') {
-        utils.logInfo(`No add-ons managed by SNM on ${host.hostname}.`);
+        utils.logInfo(`No add-ons managed by SNM on ${host.hostname}.`, logJobId);
         return;
     }
 
     let ansibleParsed = utils.parseAnsibleOutput(output.stdout);
 
+    if (ansibleParsed.ok === false) {
+        utils.logError(`Error during parsing of ansible output! Message: ${JSON.stringify(ansibleParsed.message)}`, logJobId);
+        return;
+    }
+
     //split up the output
-    let allManagedAddons: string[] = ansibleParsed.message.split('\n').slice(1);
+    let allManagedAddons: string[] = ansibleParsed.message?.split('\n').slice(1);
     let managedAddonNames: string[] = [];
 
     //extract the add-on name from the paths
@@ -135,7 +140,7 @@ export const deleteAddonsNoLongerManaged = async (host: Host, addons: AddOn[]) =
         let indexOfHost = addons.findIndex((addon) => addon.addonFolderName === addonOnHost);
 
         if (indexOfHost === -1) {
-            utils.logInfo(`Deleting ${addonOnHost} from ${host.hostname} as it is no longer managed by SNM.`);
+            utils.logInfo(`Deleting ${addonOnHost} from ${host.hostname} as it is no longer managed by SNM.`, logJobId);
             //delete the add-on
             output = await callAnsibleFunction(`${commandPrefix} -m shell -a 'rm -rf ${host.splunkHomePath}/${addonOnHost}'`, BASE_DIRECTORY + ANSIBLE_WORKING_DIRECTORY);
         }
@@ -143,7 +148,7 @@ export const deleteAddonsNoLongerManaged = async (host: Host, addons: AddOn[]) =
     }
 
     //we finished!
-    utils.logInfo(`Finished deleting add-ons removed within SNM for ${host.hostname}.`);
+    utils.logInfo(`Finished deleting add-ons removed within SNM for ${host.hostname}.`, logJobId);
 
 }
 

@@ -80,10 +80,24 @@ export const ansiblePlaybooks = sqliteTable("ansiblePlaybooks", {
     playbookContents: text().notNull(),
     createdBy: text().notNull().references(() => users.id),
     ...timestamp,
-
-
 });
 
+export const jobs = sqliteTable("jobs", {
+    id: integer().primaryKey({ autoIncrement: true }),
+    jobDescription: text().notNull(),
+    startedBy: text().notNull().references(() => users.id),
+    completed: integer({ mode: 'boolean' }).notNull(),
+    createdOn: integer({ mode: 'timestamp_ms' }).notNull().$defaultFn(() => new Date()),
+    completedOn: integer({ mode: 'timestamp_ms' }),
+});
+
+export const jobLogs = sqliteTable("jobLogs", {
+    id: integer().primaryKey({ autoIncrement: true }),
+    jobId: integer().notNull().references(() => jobs.id),
+    log: text().notNull(),
+    logLevel: integer().default(0).notNull(),
+    createdOn: integer({ mode: 'timestamp_ms' }).notNull().$defaultFn(() => new Date()),
+});
 
 
 

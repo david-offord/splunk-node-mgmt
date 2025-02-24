@@ -85,3 +85,9 @@ export interface LoginModel {
     username: string,
     password: string
 }
+
+export interface JobsModel {
+    id: number,
+    jobDescription: string,
+    startedBy: string,
+}
