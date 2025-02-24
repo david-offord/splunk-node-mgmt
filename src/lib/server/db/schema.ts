@@ -16,6 +16,7 @@ const users = sqliteTable('users', {
         .primaryKey()
         .notNull()
         .$defaultFn(() => generateId(15)),
+    name: text('name').notNull().default("Not Found"),
     email: text('email').unique().notNull(),
     hashedPassword: text('hashed_password').notNull()
 });
@@ -46,18 +47,18 @@ export const hosts = sqliteTable("hosts", {
 });
 
 export const serverClasses = sqliteTable("ServerClasses", {
-    id: integer().primaryKey(),
+    id: integer().primaryKey({ autoIncrement: true }),
     name: text(),
 });
 
 export const serverClassByHost = sqliteTable("serverClassByHost", {
-    id: integer().primaryKey(),
+    id: integer().primaryKey({ autoIncrement: true }),
     serverClassId: integer(),
     hostId: integer(),
 });
 
 export const addons = sqliteTable("addons", {
-    id: integer().primaryKey(),
+    id: integer().primaryKey({ autoIncrement: true }),
     displayName: text().notNull(),
     addonFileLocation: text().notNull(),
     addonIgnoreFileOption: text(),
@@ -66,9 +67,21 @@ export const addons = sqliteTable("addons", {
 });
 
 export const serverClassByAddon = sqliteTable("serverClassByAddon", {
-    id: integer().primaryKey(),
+    id: integer().primaryKey({ autoIncrement: true }),
     serverClassId: integer(),
     addonId: integer(),
+});
+
+
+export const ansiblePlaybooks = sqliteTable("ansiblePlaybooks", {
+    id: integer().primaryKey({ autoIncrement: true }),
+    playbookName: text().notNull(),
+    playbookNotes: text().notNull(),
+    playbookContents: text().notNull(),
+    createdBy: text().notNull().references(() => users.id),
+    ...timestamp,
+
+
 });
 
 

@@ -1,19 +1,17 @@
 import { fail, json } from '@sveltejs/kit';
 import type { Host, ValidationObject } from "$lib/types.ts"
 import type { RequestHandler } from './$types';
-import * as df from '$lib/databaseFunctions/hostDatabaseFunctions.js' //example of importing a bunch of functions
 import * as af from '$lib/workingDirectoryFunctions/ansibleInventoryManagementFunctions.js' //example of importing a bunch of functions
-import * as scdf from "$lib/databaseFunctions/serverClassDatabaseFunctions"
 import * as isIp from 'is-ip';
 import * as net from 'net';
 import { isNullOrUndefined } from '$lib/utils';
-import { getHosts } from '$lib/server/db/models/hosts';
+import { addOrUpdateHost, deleteHost, getHosts, getSingleHost } from '$lib/server/db/models/hosts';
 import { getServerClassByHosts } from '$lib/server/db/models/serverClass';
 
 //for updating/adding host
 export const GET: RequestHandler = async function GET({ request, url }) {
     //GET HOST INFORMATION
-    let rowInformation = await getHosts(url.searchParams.get('search'), parseInt(url.searchParams.get('page')));
+    let rowInformation = await getHosts(url.searchParams.get('search'), parseInt(url.searchParams.get('page')), 10);
     let rows = rowInformation.rows as Host[];
     let rowCount = rowInformation.totalRows;
 
@@ -100,7 +98,7 @@ export const POST: RequestHandler = async function POST({ request }) {
 
 
     //get the old host from the db
-    let oldHost = await df.getSingleHost(host.id);
+    let oldHost = await getSingleHost(host.id);
 
     //check if the old host existed, and if the password were filled out
     if (oldHost == null && (host.linuxPassword === null || host.linuxPassword === '')) {
@@ -121,10 +119,10 @@ export const POST: RequestHandler = async function POST({ request }) {
 
 
     //update/add the host
-    let results = await df.addUpdateHost(host);
+    let results = await addOrUpdateHost(host);
 
     //get updated host
-    let newHost = await df.getSingleHost(results);
+    let newHost = await getSingleHost(results) as Host;
 
     //if the database thing succeeded
     if (results !== -1) {
@@ -142,11 +140,8 @@ export const DELETE: RequestHandler = async function DELETE({ request }) {
     //get the host from the request
     let host: Host = await request.json();
 
-    //get the old host from the db
-    let oldHost = await df.getSingleHost(host.id);
-
     //delete from the db
-    await df.deleteSingleHost(host.id);
+    await deleteHost(host.id);
 
     return json(host);
 }
@@ -176,3 +171,4 @@ function checkConnection(host: string, port: number, timeout: number = null) {
         });
     });
 }
+

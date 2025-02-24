@@ -65,7 +65,14 @@ export interface AddOn {
 }
 
 
-
+export interface AnsiblePlaybookModel {
+    id: number,
+    playbookName: string,
+    playbookNotes?: string,
+    playbookContents?: string,
+    createdBy?: string
+    createdByName?: string
+}
 
 export interface AnsibleVariableFile {
     ansible_user: string,

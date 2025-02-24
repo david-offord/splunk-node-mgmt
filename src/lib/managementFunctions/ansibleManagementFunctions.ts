@@ -21,28 +21,35 @@ export const deployAddonsToHost = async (host: Host, addons: AddOn[]) => {
     let output: any = null;
     //extract all tar files to the folder
     for (let addon of addons) {
-        //copy file to tmp
-        await fs.copyFileSync(path.join(BASE_DIRECTORY, ANSIBLE_ADDONS_DIRECTORY, addon.addonFileLocation), path.join(extract_folder, addon.addonFileLocation));
-        //extract it
-        await utils.callCliFunction(`tar -xvf ${path.join(extract_folder, addon.addonFileLocation)}`, extract_folder);
+        try {
 
-        //split all the ignore paths
-        let allRemovalFiles: string[] = addon.addonIgnoreFileOption?.split(',');
+            //copy file to tmp
+            await fs.copyFileSync(path.join(BASE_DIRECTORY, ANSIBLE_ADDONS_DIRECTORY, addon.addonFileLocation), path.join(extract_folder, addon.addonFileLocation));
+            //extract it
+            await utils.callCliFunction(`tar -xvf ${path.join(extract_folder, addon.addonFileLocation)}`, extract_folder);
 
-        //if there are any, remove them
-        if (allRemovalFiles !== null && allRemovalFiles.length > 0 && allRemovalFiles[0] !== '') {
-            for (let p of allRemovalFiles) {
-                //if it has any special directory paths
-                if (p.indexOf('..') > -1 || p.indexOf('~') > -1 || p.indexOf('!') > -1) {
-                    continue;
+            //split all the ignore paths
+            let allRemovalFiles: string[] = addon.addonIgnoreFileOption?.split(',');
+
+            //if there are any, remove them
+            if (allRemovalFiles !== null && allRemovalFiles.length > 0 && allRemovalFiles[0] !== '') {
+                for (let p of allRemovalFiles) {
+                    //if it has any special directory paths
+                    if (p.indexOf('..') > -1 || p.indexOf('~') > -1 || p.indexOf('!') > -1) {
+                        continue;
+                    }
+                    //delete the files
+                    await utils.callCliFunction(`rm -rf '${path.join(extract_folder, addon.addonFolderName, p)}'`, extract_folder);
                 }
-                //delete the files
-                await utils.callCliFunction(`rm -rf '${path.join(extract_folder, addon.addonFolderName, p)}'`, extract_folder);
             }
+
+            //add in a "managed by us" file
+            fs.writeFileSync(path.join(extract_folder, addon.addonFolderName, 'managed_by_snm'), 'This file is managed by the Splunk Node Management Tool.Do not modify or delete.\n');
+        }
+        catch (ex) {
+            utils.logError(`Error occurred deploying add-on ${addon?.displayName} to ${host.hostname}. Exception: ${ex}`);
         }
 
-        //add in a "managed by us" file
-        fs.writeFileSync(path.join(extract_folder, addon.addonFolderName, 'managed_by_snm'), 'This file is managed by the Splunk Node Management Tool.Do not modify or delete.\n');
     }
 
     //delete all the tar files in this folder

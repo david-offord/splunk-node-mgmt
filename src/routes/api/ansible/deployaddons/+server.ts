@@ -1,19 +1,20 @@
 import { fail, json } from '@sveltejs/kit';
 import type { Host, ValidationObject } from "$lib/types.ts"
 import type { RequestHandler } from './$types';
-import * as df from '$lib/databaseFunctions/hostDatabaseFunctions.js' //example of importing a bunch of functions
-import * as amf from '$lib/managementFunctions/ansibleManagementFunctions' //example of importing a bunch of functions
 import Queue from 'yocto-queue';
+
+import * as amf from '$lib/managementFunctions/ansibleManagementFunctions' //example of importing a bunch of functions
 import * as utils from '$lib/utils';
-import { debugRefreshSplunk } from '$lib/managementFunctions/splunkManagementFunctions';
+import { getAllAddonsForHost, getHosts, getSingleHost } from '$lib/server/db/models/hosts';
+import { log } from 'console';
 
 //for updating/adding host
 export const POST: RequestHandler = async function POST({ request }) {
     let host = await request.json() as Host;
 
     //get stuff from db
-    let fullHost = await df.getSingleHost(host.id);
-    let allAddonsForHost = await df.getAllAddonsForHost(host.id);
+    let fullHost = await getSingleHost(host.id);
+    let allAddonsForHost = await getAllAddonsForHost(host.id);
 
     //call the function that will do this
     await amf.deployAddonsToHost(fullHost, allAddonsForHost);
@@ -27,7 +28,8 @@ export const POST: RequestHandler = async function POST({ request }) {
 //for updating/adding host
 export const PATCH: RequestHandler = async function POST({ request }) {
     //get stuff from db
-    let allHosts = await df.getAllHosts();
+    let allHostInfo = await getHosts();
+    let allHosts = (await allHostInfo).rows;
 
     let allPromises: Promise<void>[] = [];
     let resolvedPromises = 0;
@@ -38,9 +40,13 @@ export const PATCH: RequestHandler = async function POST({ request }) {
         let deploymentPromise = new Promise<void>(async (resolve, reject) => {
             try {
                 logs.enqueue(`Getting all add-ons for ${host.hostname}...`);
-                let allAddonsForHost = await df.getAllAddonsForHost(host.id);
+                let allAddonsForHost = await getAllAddonsForHost(host.id);
 
-                logs.enqueue(`Got all add-ons for host ${host.hostname}. Deploying...`);
+                if (allAddonsForHost.length === 0)
+                    logs.enqueue(`Host ${host.hostname} had no add-ons to deploy. Skipping.`)
+                else
+                    logs.enqueue(`Got all add-ons for host ${host.hostname}. Deploying...`);
+
                 //call the function that will do this
                 await amf.deployAddonsToHost(host, allAddonsForHost);
 

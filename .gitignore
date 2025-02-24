@@ -25,6 +25,7 @@ vite.config.ts.timestamp-*
 workingdirectory/ansible/*
 workingdirectory/addons/*
 workingdirectory/temp/*
+SQL_QUERIES/
 
 #db files
 data.db
