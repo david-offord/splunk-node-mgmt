@@ -22,10 +22,10 @@
                     <a class="nav-link active" aria-current="page" href="/addons">Add-on Manager</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link active" aria-current="page" href="/playbooks/manager">Playbook Manager</a>
+                    <a class="nav-link active" aria-current="page" href="/playbooks">Playbook Manager</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link active" aria-current="page" href="/hello">Run Playbooks</a>
+                    <a class="nav-link active" aria-current="page" href="/jobs">Jobs</a>
                 </li>
             </ul>
         </div>

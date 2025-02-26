@@ -88,6 +88,7 @@ export const jobs = sqliteTable("jobs", {
     startedBy: text().notNull().references(() => users.id),
     completed: integer({ mode: 'boolean' }).notNull(),
     createdOn: integer({ mode: 'timestamp_ms' }).notNull().$defaultFn(() => new Date()),
+    updatedOn: integer({ mode: 'timestamp_ms' }).notNull().$defaultFn(() => new Date()).$onUpdate(() => new Date()),
     completedOn: integer({ mode: 'timestamp_ms' }),
 });
 
