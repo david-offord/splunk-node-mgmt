@@ -33,6 +33,11 @@
         currentlyEditingPlaybook = null;
         editPlaybookName = "";
         editPlaybookDescription = "";
+
+        if (aceEditor === null) {
+            initializeAceEditor();
+        }
+
         aceEditor.setValue("", 1);
         showHideEditModal(true);
     }
@@ -41,6 +46,11 @@
         currentlyEditingPlaybook = editPlaybook;
         editPlaybookName = editPlaybook.playbookName;
         editPlaybookDescription = editPlaybook.playbookNotes;
+
+        if (aceEditor === null) {
+            initializeAceEditor();
+        }
+
         aceEditor.setValue(editPlaybook.playbookContents, 1);
         showHideEditModal(true);
     }
@@ -144,13 +154,18 @@
         }
     }
 
+    function initializeAceEditor() {
+        //@ts-ignore
+        aceEditor = ace.edit("editor", {});
+        aceEditor.setTheme("ace/theme/monokai");
+        aceEditor.session.setMode("ace/mode/yaml");
+    }
+
     //Add all listeners
     onMount(() => {
         window.addEventListener("load", (event) => {
             //@ts-ignore
-            aceEditor = ace.edit("editor", {});
-            aceEditor.setTheme("ace/theme/monokai");
-            aceEditor.session.setMode("ace/mode/yaml");
+            initializeAceEditor();
         });
     });
 </script>
@@ -195,12 +210,15 @@
                     <td>{playbook.playbookNotes?.length > 30 ? playbook.playbookNotes?.slice(0, 30) + "..." : playbook?.playbookNotes}</td>
                     <td>{playbook.createdByName}</td>
                     <td>
-                        <button aria-label="Edit Playbook" data-bs-toggle="tooltip" data-placement="top" title="Edit Playbook" onclick={() => editPlaybookModal(playbook)}>
+                        <button aria-label="Edit Playbook" class="btn btn btn-table-action" data-bs-toggle="tooltip" data-placement="top" title="Edit Playbook" onclick={() => editPlaybookModal(playbook)}>
                             <i class="bi bi-pencil"></i>
                         </button>
-                        <button aria-label="Delete Playbook" data-bs-toggle="tooltip" data-placement="top" title="Delete Host" onclick={() => confirmPlaybookDeletion(playbook)}>
+                        <button aria-label="Delete Playbook" class="btn btn-table-action" data-bs-toggle="tooltip" data-placement="top" title="Delete Playbook" onclick={() => confirmPlaybookDeletion(playbook)}>
                             <i class="bi bi-trash"></i>
                         </button>
+                        <a aria-label="Run Playbook" class="btn btn btn-table-action" data-bs-toggle="tooltip" data-placement="top" title="Run Playbook" href="/playbooks/run/{playbook.id}">
+                            <i class="bi bi-play-fill"></i>
+                        </a>
                     </td>
                 </tr>
             {/each}

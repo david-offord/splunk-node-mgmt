@@ -1,5 +1,5 @@
 import { getAnsiblePlaybooks, getSingleAnsiblePlaybook } from '$lib/server/db/models/ansiblePlaybooks';
-import { addJobLog, completeJob, createJob, getAllJobs } from '$lib/server/db/models/jobs';
+import { getHosts } from '$lib/server/db/models/hosts';
 import type { AnsiblePlaybookModel } from '$lib/types';
 import type { PageServerLoad } from './$types';
 
@@ -12,9 +12,11 @@ export const load: PageServerLoad = async ({ params }) => {
     //get the playbook
     let playbook = await getSingleAnsiblePlaybook(playbookId) as AnsiblePlaybookModel;
 
+    let allHosts = await getHosts();
 
     return {
-        playbook: playbook
+        playbook: playbook,
+        hosts: allHosts.rows
     }
 };
 

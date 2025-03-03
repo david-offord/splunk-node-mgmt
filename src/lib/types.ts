@@ -74,6 +74,17 @@ export interface AnsiblePlaybookModel {
     createdByName?: string
 }
 
+
+export interface AnsiblePlaybookModelVariables extends AnsiblePlaybookModel {
+    variables?: AnsiblePlaybookVariables[],
+    hosts?: Host[],
+}
+
+export interface AnsiblePlaybookVariables {
+    variableName: string,
+    variableValue: string,
+}
+
 export interface AnsibleVariableFile {
     ansible_user: string,
     ansible_password: string,

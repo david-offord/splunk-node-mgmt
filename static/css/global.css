@@ -15,6 +15,14 @@ body {
     color: rgb(96, 184, 243) !important;
 }
 
+h3.section-header {
+    color: #60b8f3;
+}
+
+.light-label {
+    color: #d4eeff;
+}
+
 .table-button {
     background-color: yellowgreen;
     border-color: yellowgreen;
@@ -30,4 +38,9 @@ th {
 
 .mat-green {
     color: rgb(23, 235, 23) !important;
+}
+
+.btn.btn-table-action {
+    background-color: #17eb17;
+    border-color: #17eb17;
 }

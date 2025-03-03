@@ -45,17 +45,6 @@ export const addUpdateHostInventory = async (oldHost: Host, newHost: Host) => {
         "splunk_home_path": newHost.splunkHomePath,
     }
 
-    //now start doing logic for ansible password storing
-
-    //config[newStanzaName][newHost.hostname + ' ansible_host='] = newHost.hostname;
-    // config[newStanzaName].ansible_hostname = newHost.hostname;
-    // config[newStanzaName].customer_code = newHost.customerCode;
-    // config[newStanzaName].host_id = newHost.id;
-    // config[newStanzaName].ansible_user = '{{' + newHost.customerCode + '_' + newHost.hostname + '_ssh_username}}'
-    // config[newStanzaName].ansible_password = '"{{' + newHost.customerCode + '_' + newHost.hostname + '_ssh_password}}"';
-    // config[newStanzaName].ansible_become_password = '"{{' + newHost.customerCode + '_' + newHost.hostname + '_ssh_password}}"';
-    // config[newStanzaName].ansible_splunk_password = '{{' + newHost.customerCode + '_' + newHost.hostname + '_splunk_password}}';
-
     //print it out to the file
     fs.writeFileSync(ANSIBLE_INVENTORY_FILE, stringify(config));
 
@@ -127,6 +116,10 @@ function saveSecretsExisting(oldHost: Host, host: Host) {
     }
     if (host.splunkPassword) {
         ansibleVaultObj['ansible_splunk_password'] = host.splunkPassword;
+    }
+    //if they changed the username
+    if (host.linuxUsername !== oldHost.linuxUsername) {
+        ansibleVaultObj['ansible_user'] = host.linuxUsername;
     }
     //delete the old file
     deleteVaultFile(oldHost.ansibleName);

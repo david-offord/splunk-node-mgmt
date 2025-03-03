@@ -1,162 +1,147 @@
 <script lang="ts">
-    import type { AnsiblePlaybookModel } from "$lib/types";
-    import type { Modal } from "bootstrap";
+    import { page } from "$app/stores";
+    import type { AnsiblePlaybookModel, AnsiblePlaybookModelVariables, Host } from "$lib/types";
     import type { PageServerData } from "./$types";
     import { onMount } from "svelte";
-    import { page } from "$app/stores";
 
     //load from server side
     let { data }: { data: PageServerData; form: FormData } = $props();
-    let allPlaybooks: AnsiblePlaybookModel[] = $state(data.playbooks);
+    let runPlaybook: AnsiblePlaybookModel = $state(data.playbook);
+    let hosts: Host[] = $state(data.hosts);
 
-    //all variables used for editing and deleting
-    let currentlyEditingPlaybook: AnsiblePlaybookModel = $state(null);
-    let editPlaybookName = $state("");
-    let editPlaybookDescription = $state("");
-    let editPlaybookContents = $state("");
-
-    //UI variables
-    let deleteModal: Modal = null;
-    let editModal: Modal = null;
+    //ui variables
     let aceEditor: any = null;
+    let formInputs: any[] = [];
 
-    async function getAllPlaybooks() {
-        const response = await fetch($page.url.pathname, { method: "GET" });
-        if (response.ok) {
-            allPlaybooks = (await response.json()).playbooks;
-        } else {
-            console.log("Error occurred getting playbooks.");
-        }
-    }
+    let playbookOriginalContents = runPlaybook.playbookContents;
+    let selectedHosts: Host[] = $state([]);
 
-    function addNewPlaybookModal() {
-        currentlyEditingPlaybook = null;
-        editPlaybookName = "";
-        editPlaybookDescription = "";
-        aceEditor.setValue("", 1);
-        showHideEditModal(true);
-    }
+    let playbookVariableMatches = runPlaybook.playbookContents.matchAll(/\$\((?<variablename>.*?)\)/g);
+    //first thing is to build the inputs on the right from the contents of the playbook
+    for (const match of playbookVariableMatches) {
+        let matchText = match.groups.variablename;
 
-    function editPlaybookModal(editPlaybook: AnsiblePlaybookModel) {
-        currentlyEditingPlaybook = editPlaybook;
-        editPlaybookName = editPlaybook.playbookName;
-        editPlaybookDescription = editPlaybook.playbookNotes;
-        aceEditor.setValue(editPlaybook.playbookContents, 1);
-        showHideEditModal(true);
-    }
-
-    /**
-     * Actually shows and hides the delete modal
-     * @param show
-     */
-    function showHideEditModal(show = true) {
-        if (editModal == null) {
-            //@ts-ignore
-            editModal = new bootstrap.Modal(document.getElementById("playbookEditModal"));
+        //if it didnt match, skip
+        if (!matchText) {
+            continue;
         }
 
-        if (show) {
-            editModal.show();
-        } else {
-            editModal.hide();
-        }
-    }
+        //split by ;
+        let splitMatches = matchText.split(";");
 
-    async function savePlaybook() {
-        //if its a new one
-        if (currentlyEditingPlaybook === null) {
-            createPlaybook();
+        //if it is a hosts variable, skip
+        if (splitMatches[0].trim().toLowerCase() === "hosts") {
+            continue;
         }
-        //otherwise its an existing one
-        else {
-            updatePlaybook();
-        }
-    }
 
-    async function createPlaybook() {
-        let updatePlaybook: AnsiblePlaybookModel = {
-            id: -1,
-            playbookName: editPlaybookName,
-            playbookNotes: editPlaybookDescription,
-            playbookContents: aceEditor.getValue(),
+        //create an object for input definition
+        let newFormInput = {
+            inputName: splitMatches[0],
+            optional: false,
+            defaultValue: "",
         };
-        const response = await fetch($page.url.pathname, { method: "POST", body: JSON.stringify(updatePlaybook) });
 
-        if (response.ok) {
-            showHideEditModal(false);
-            getAllPlaybooks();
-        } else {
-            //TODO: ADD VALIDATION HERE
+        //for each split from the split(;)
+        for (let sm of splitMatches) {
+            //if it is optional
+            if (sm.trim().toLowerCase() === "required") {
+                newFormInput.optional = true;
+            }
+            //if there is a default value
+            if (sm.trim().toLowerCase().indexOf("default=") === 0) {
+                newFormInput.defaultValue = sm.slice(8);
+            }
         }
+
+        //add it into the array for inputs later on
+        formInputs.push(newFormInput);
     }
 
-    async function updatePlaybook() {
-        let updatePlaybook: AnsiblePlaybookModel = {
-            id: currentlyEditingPlaybook.id,
-            playbookName: editPlaybookName,
-            playbookNotes: editPlaybookDescription,
-            playbookContents: aceEditor.getValue(),
-        };
-        const response = await fetch($page.url.pathname, { method: "PATCH", body: JSON.stringify(updatePlaybook) });
-
-        if (response.ok) {
-            showHideEditModal(false);
-            getAllPlaybooks();
-        } else {
-            //TODO: ADD VALIDATION HERE
-        }
+    function initializeAceEditor() {
+        //@ts-ignore
+        aceEditor = ace.edit("aceReadonlyEditor", {});
+        aceEditor.setTheme("ace/theme/monokai");
+        aceEditor.session.setMode("ace/mode/yaml");
+        aceEditor.setValue(runPlaybook.playbookContents, -1);
+        aceEditor.setOption("useWrapMode", true);
+        aceEditor.setReadOnly(true);
     }
 
-    /**
-     * Shows modal to confirm deletion of a playbook
-     * @param deletePlaybook
-     */
-    function confirmPlaybookDeletion(deletePlaybook: AnsiblePlaybookModel) {
-        currentlyEditingPlaybook = deletePlaybook;
-        showHideDeleteModal(true);
+    //TODO: Implement this
+    function toggleAllHosts() {}
+
+    function toggleHost(host: Host) {
+        if (selectedHosts.indexOf(host) === -1) {
+            selectedHosts.push(host);
+        } else {
+            selectedHosts.filter((x) => x !== host);
+        }
+        updatePlaybookView();
     }
 
-    /**
-     * Actually shows and hides the delete modal
-     * @param show
-     */
-    function showHideDeleteModal(show = true) {
-        if (deleteModal == null) {
-            //@ts-ignore
-            deleteModal = new bootstrap.Modal(document.getElementById("deletePlaybookModal"));
+    //update any variable changes in the view on the left
+    function updatePlaybookView() {
+        let newContents = playbookOriginalContents;
+
+        //do all the non host inputs
+        let allInputs = [...document.getElementsByClassName("playbook-input")];
+        for (let input of allInputs) {
+            //slice off "input"
+            let inputName = input.id.slice(5);
+            //oh typescript, my love
+            let inputValue = (input as HTMLInputElement).value;
+
+            if (inputValue === "") {
+                continue;
+            }
+
+            //get the start of the section
+            let regex = new RegExp("\\$\\((" + inputName + ".*?)\\)");
+            newContents = newContents.replace(regex, inputValue);
         }
 
-        if (show) {
-            deleteModal.show();
-        } else {
-            deleteModal.hide();
+        //do the hosts now
+        let hostString = "";
+        for (let host of selectedHosts) {
+            hostString += host.ansibleName + ", ";
         }
+        if (hostString.length !== 0) {
+            //get rid of the comma
+            hostString = hostString.slice(0, -2);
+            newContents = newContents.replace(/\$\((hosts.*?)\)/, hostString);
+        }
+
+        aceEditor.setValue(newContents, -1);
     }
 
-    async function deletePlaybook() {
-        const response = await fetch($page.url.pathname, { method: "DELETE", body: JSON.stringify(currentlyEditingPlaybook) });
+    //send to backend
+    async function sendPlaybookToBackend() {
+        let sendToApi: AnsiblePlaybookModelVariables = runPlaybook;
+        sendToApi.hosts = selectedHosts;
+        sendToApi.variables = [];
 
-        if (response.ok) {
-            await getAllPlaybooks();
-            showHideDeleteModal(false);
-        } else {
-            console.log(response);
+        //do all the non host inputs
+        let allInputs = [...document.getElementsByClassName("playbook-input")];
+        for (let input of allInputs) {
+            //slice off "input"
+            let inputName = input.id.slice(5);
+            //oh typescript, my love
+            let inputValue = (input as HTMLInputElement).value;
+
+            sendToApi.variables.push({ variableName: inputName, variableValue: inputValue });
         }
+
+        const response = await fetch($page.url.pathname, { method: "POST", body: JSON.stringify(sendToApi) });
     }
 
     //Add all listeners
     onMount(() => {
-        window.addEventListener("load", (event) => {
-            //@ts-ignore
-            aceEditor = ace.edit("editor", {});
-            aceEditor.setTheme("ace/theme/monokai");
-            aceEditor.session.setMode("ace/mode/yaml");
-        });
+        initializeAceEditor();
     });
 </script>
 
 <svelte:head>
-    <title>Ansible Playbooks</title>
+    <title>Run Playbook</title>
 
     <style type="text/css" media="screen">
         #TestFloatingAdd {
@@ -169,9 +154,15 @@
             color: red;
         }
 
-        #editor {
-            width: 100%;
+        #aceReadonlyEditor {
+            min-height: 40rem;
             height: 100%;
+            width: 100%;
+        }
+
+        #HostSelectionDropdown {
+            min-height: 20rem;
+            width: 100%;
         }
     </style>
 
@@ -179,124 +170,57 @@
 </svelte:head>
 
 <div class="container mt-2">
-    <table class="table">
-        <thead>
-            <tr>
-                <th>Playbook Name</th>
-                <th>Playbook Notes</th>
-                <th>Created By</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            {#each allPlaybooks as playbook}
-                <tr>
-                    <td>{playbook.playbookName}</td>
-                    <td>{playbook.playbookNotes?.length > 30 ? playbook.playbookNotes?.slice(0, 30) + "..." : playbook?.playbookNotes}</td>
-                    <td>{playbook.createdByName}</td>
-                    <td>
-                        <button aria-label="Edit Playbook" data-bs-toggle="tooltip" data-placement="top" title="Edit Playbook" onclick={() => editPlaybookModal(playbook)}>
-                            <i class="bi bi-pencil"></i>
-                        </button>
-                        <button aria-label="Delete Playbook" data-bs-toggle="tooltip" data-placement="top" title="Delete Host" onclick={() => confirmPlaybookDeletion(playbook)}>
-                            <i class="bi bi-trash"></i>
-                        </button>
-                    </td>
-                </tr>
-            {/each}
-        </tbody>
-    </table>
-</div>
-
-<!--Edit modal-->
-<div class="modal fade" id="playbookEditModal" tabindex="-1" aria-labelledby="playbookEditModal" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="exampleModalLabel">{currentlyEditingPlaybook === null ? "Create New Playbook" : `Editing ${currentlyEditingPlaybook.playbookName}`}</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+    <div class="row">
+        <div class="col-6">
+            <div id="aceReadonlyEditor"></div>
+        </div>
+        <div class="col-6">
+            <div class="row">
+                <div class="col-12"><h3 class="section-header">Host Selection</h3></div>
+                <!-- <div class="col-12">
+                    <select multiple id="HostSelectionDropdown">
+                        <option value="s">Sample Option</option>
+                    </select>
+                </div> -->
+                <div class="col-12" style="max-height: 20rem; overflow:auto;">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th><input class="form-check-input" type="checkbox" value="" id="flexCheckDefault" /></th>
+                                <th>Host</th>
+                                <th>Customer Code</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {#each hosts as host}
+                                <tr>
+                                    <td><input id="hostCheckbox{host.id}" class="form-check-input host-selection-checkbox" type="checkbox" value={host.id} onchange={() => toggleHost(host)} /></td>
+                                    <td>{host.hostname}</td>
+                                    <td>{host.customerCode}</td>
+                                </tr>
+                            {/each}
+                        </tbody>
+                    </table>
+                </div>
             </div>
-            <div class="modal-body">
-                <form>
-                    <div class="row">
-                        <div class="col-12">
-                            <label for="inputPlaybookname" class="form-label">Playbook Name</label>
-                            <input bind:value={editPlaybookName} type="text" required class="form-control" id="inputPlaybookname" />
-                            <!-- <label for="inputPlaybookname" class="form-label form-validation-message {modalValidation?.playbookname == null ? 'd-none' : ''}">{modalValidation?.playbookname}</label> -->
-                        </div>
+            {#if formInputs.length > 0}
+                <div class="row mt-3">
+                    <div class="col-12"><h3 class="section-header">Playbook Variables</h3></div>
+                    <div class="col-12">
+                        <form>
+                            {#each formInputs as input}
+                                <div class="row mt-2">
+                                    <div class="col-12">
+                                        <label for="input{input.inputName}" class="form-label light-label">{input.inputName}</label>
+                                        <input type="text" required value={input.defaultValue} class="form-control playbook-input" id="input{input.inputName}" oninput={() => updatePlaybookView()} />
+                                    </div>
+                                </div>
+                            {/each}
+                        </form>
                     </div>
-                    <div class="row mt-3">
-                        <div class="col-12">
-                            <label for="inputIpAddress" class="form-label">Playbook Description</label>
-                            <textarea bind:value={editPlaybookDescription} required class="form-control" id="inputIpAddress" style="resize: none; height:8em;"></textarea>
-                            <!-- <label for="inputPlaybookname" class="form-label form-validation-message {modalValidation?.ipAddress == null ? 'd-none' : ''}">{modalValidation?.ipAddress}</label> -->
-                        </div>
-                    </div>
-                    <div class="row mt-3">
-                        <div class="col-12">
-                            <label for="inputIpAddress" class="form-label">Playbook Contents</label>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-12">
-                            <div style="height:40rem;">
-                                <div id="editor"></div>
-                            </div>
-                        </div>
-                    </div>
-                </form>
-            </div>
-
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <button
-                    type="submit"
-                    class="btn btn-primary"
-                    onclick={() => {
-                        savePlaybook();
-                    }}>Save changes</button
-                >
-            </div>
+                    <div class="col-12 mt-5"><button type="button" class="btn btn-success col-12" onclick={() => sendPlaybookToBackend()}>Run</button></div>
+                </div>
+            {/if}
         </div>
     </div>
 </div>
-
-<!--Confirm deletion of a playbook modal-->
-<div class="modal fade" id="deletePlaybookModal" tabindex="-1" aria-labelledby="deletePlaybookModal" aria-hidden="true">
-    <div class="modal-dialog modal-sm">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="exampleModalLabel">Confirm Deletion of {currentlyEditingPlaybook?.playbookName}</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <form>
-                    <div class="row">
-                        <div class="col-6">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                        </div>
-                        <div class="col-6">
-                            <button
-                                type="submit"
-                                class="btn btn-danger"
-                                onclick={() => {
-                                    deletePlaybook();
-                                }}>Confirm</button
-                            >
-                        </div>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
-
-<span id="TestFloatingAdd">
-    <button
-        class="btn btn-success btn-lg"
-        type="button"
-        onclick={() => {
-            addNewPlaybookModal();
-        }}>Add</button
-    >
-</span>
