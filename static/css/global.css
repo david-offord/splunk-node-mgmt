@@ -44,3 +44,8 @@ th {
     background-color: #17eb17;
     border-color: #17eb17;
 }
+
+.required-star {
+    color: red;
+    font-size: larger;
+}

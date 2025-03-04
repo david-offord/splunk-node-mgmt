@@ -13,10 +13,17 @@
     let aceEditor: any = null;
     let formInputs: any[] = [];
 
+    //variables for sending to backend
     let playbookOriginalContents = runPlaybook.playbookContents;
     let selectedHosts: Host[] = $state([]);
+    let currentlySendingToBackend = $state(false);
+
+    //validation messages
+    let hostsValidationMessage = $state("");
+    let varsValidationMessage = $state("");
 
     let playbookVariableMatches = runPlaybook.playbookContents.matchAll(/\$\((?<variablename>.*?)\)/g);
+
     //first thing is to build the inputs on the right from the contents of the playbook
     for (const match of playbookVariableMatches) {
         let matchText = match.groups.variablename;
@@ -116,8 +123,37 @@
 
     //send to backend
     async function sendPlaybookToBackend() {
+        //if its already sending, dont do it again
+        if (currentlySendingToBackend) {
+            return;
+        }
+
+        let error = false;
+        //check that at least 1 host is selected
+        if ([...document.querySelectorAll(".host-selection-checkbox:checked")].length === 0) {
+            hostsValidationMessage = "Please select at least one host";
+            error = true;
+        }
+
+        //check that all required fields have a value
+        let allRequiredInputs = [...document.getElementsByClassName("required")];
+        for (let input of allRequiredInputs) {
+            if ((input as HTMLInputElement).value === "") {
+                varsValidationMessage = "Please fill in all required fields";
+                error = true;
+            }
+        }
+
+        // if either of the above have an issue, dont run
+        if (error) {
+            return;
+        }
+
+        //set a thing to stop it from rerunning
+        currentlySendingToBackend = true;
+
         let sendToApi: AnsiblePlaybookModelVariables = runPlaybook;
-        sendToApi.hosts = selectedHosts;
+        sendToApi.hosts = [];
         sendToApi.variables = [];
 
         //do all the non host inputs
@@ -131,7 +167,21 @@
             sendToApi.variables.push({ variableName: inputName, variableValue: inputValue });
         }
 
+        //all the host checkboxes now
+        let hostCheckboxes = [...document.querySelectorAll(".host-selection-checkbox:checked")];
+        for (let hc of hostCheckboxes) {
+            //slice off "input"
+            let hostId = parseInt(hc.id.slice(12));
+            let host = hosts.find((x) => x.id === hostId);
+
+            sendToApi.hosts.push(host);
+        }
+
         const response = await fetch($page.url.pathname, { method: "POST", body: JSON.stringify(sendToApi) });
+
+        if (response.ok) {
+        } else {
+        }
     }
 
     //Add all listeners
@@ -177,11 +227,6 @@
         <div class="col-6">
             <div class="row">
                 <div class="col-12"><h3 class="section-header">Host Selection</h3></div>
-                <!-- <div class="col-12">
-                    <select multiple id="HostSelectionDropdown">
-                        <option value="s">Sample Option</option>
-                    </select>
-                </div> -->
                 <div class="col-12" style="max-height: 20rem; overflow:auto;">
                     <table class="table">
                         <thead>
@@ -202,6 +247,9 @@
                         </tbody>
                     </table>
                 </div>
+                <div class="col-12">
+                    <h4 class="text-danger {hostsValidationMessage === '' || hostsValidationMessage == null ? 'd-none' : ''}">{hostsValidationMessage}</h4>
+                </div>
             </div>
             {#if formInputs.length > 0}
                 <div class="row mt-3">
@@ -211,14 +259,24 @@
                             {#each formInputs as input}
                                 <div class="row mt-2">
                                     <div class="col-12">
+                                        {#if input.optional === false}<label for="input{input.inputName}" class="required-star">*</label>{/if}
                                         <label for="input{input.inputName}" class="form-label light-label">{input.inputName}</label>
-                                        <input type="text" required value={input.defaultValue} class="form-control playbook-input" id="input{input.inputName}" oninput={() => updatePlaybookView()} />
+                                        <input type="text" required value={input.defaultValue} class="form-control playbook-input {input.optional ? '' : 'required'}" id="input{input.inputName}" oninput={() => updatePlaybookView()} />
                                     </div>
                                 </div>
                             {/each}
+                            <div class="row mt-2 {varsValidationMessage === '' || varsValidationMessage == null ? 'd-none' : ''}">
+                                <div class="col-12">
+                                    <h4 class="text-danger">{varsValidationMessage}</h4>
+                                </div>
+                            </div>
                         </form>
                     </div>
-                    <div class="col-12 mt-5"><button type="button" class="btn btn-success col-12" onclick={() => sendPlaybookToBackend()}>Run</button></div>
+                    <div class="col-12 mt-4">
+                        <button type="button" class="btn btn-success col-12" onclick={() => sendPlaybookToBackend()}
+                            >{#if currentlySendingToBackend}<i class="bi bi-clock"></i>{:else}Send{/if}</button
+                        >
+                    </div>
                 </div>
             {/if}
         </div>

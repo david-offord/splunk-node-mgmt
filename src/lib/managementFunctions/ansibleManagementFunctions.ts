@@ -1,5 +1,5 @@
 import type { AddOn, AnsiblePlaybookModel, AnsiblePlaybookVariables, AnsibleVariableFile, Host } from "$lib/types.ts"
-import { isNullOrUndefined, logDebug } from "$lib/utils";
+import { isNullOrUndefined, logDebug, logError } from "$lib/utils";
 import { exec } from 'child_process';
 import * as utils from '$lib/utils'
 import * as fs from "fs";
@@ -182,47 +182,56 @@ const callAnsibleFunction = async (command: string, cwd: string = BASE_DIRECTORY
 
 
 
-export const callAnsiblePlaybook = async (playbook: AnsiblePlaybookModel, hosts: Host[], variables: AnsiblePlaybookVariables[]) => {
-    let playbookText = playbook.playbookContents;
+export const callAnsiblePlaybook = async (jobId: number, playbook: AnsiblePlaybookModel, hosts: Host[], variables: AnsiblePlaybookVariables[]) => {
+    try {
+        let playbookText = playbook.playbookContents;
 
-    //replace all the playbook variables
-    for (let playbookVar of variables) {
-        let regex = new RegExp("\\$\\((" + playbookVar.variableName + ".*?)\\)");
-        playbookText = playbookText.replace(regex, playbookVar.variableValue);
+        //replace all the playbook variables
+        for (let playbookVar of variables) {
+            let regex = new RegExp("\\$\\((" + playbookVar.variableName + ".*?)\\)");
+            playbookText = playbookText.replace(regex, playbookVar.variableValue);
+        }
+
+        //replace the host value
+        //do the hosts now
+        let hostString = "";
+        for (let host of hosts) {
+            hostString += host.ansibleName + ", ";
+        }
+        //get rid of the comma
+        hostString = hostString.slice(0, -2);
+        playbookText = playbookText.replace(/\$\((hosts.*?)\)/, hostString);
+
+        //create the temp folder
+
+        //define the folder to extract to and create it
+        let extract_folder = path.join(BASE_DIRECTORY, TEMP_EXTRACT_LOCATION, new Date().getTime().toString());
+        fs.mkdirSync(extract_folder, { recursive: true });
+
+        let fileName = playbook.playbookName.replaceAll(' ', '_');
+        fileName = fileName.replaceAll(/[^a-zA-Z0-9_]/g, '');
+        fileName = fileName + '.yaml';
+
+        //write playbook to file in the temp folder
+        await new Promise((resolve, reject) => {
+            fs.writeFile(path.join(extract_folder, fileName), playbookText, resolve);
+        });
+
+        //run the playbook now
+        let output = await callAnsibleFunction(`ansible-playbook ${path.join(extract_folder, fileName)} -i inventory.yaml -b --vault-password-file .pass `);
+
+        //log that to the job
+        await logDebug(output.stdout, jobId);
+        await logError(output.stderr, jobId);
+
+
+        //delete the temp folder
+        await new Promise((resolve, reject) => {
+            fs.rm(extract_folder, { recursive: true }, resolve);
+        });
+    }
+    catch (ex) {
+        logError(`Error occurred running playbook ${playbook.playbookName}. Exception: ${ex}`, jobId);
     }
 
-    //replace the host value
-    //do the hosts now
-    let hostString = "";
-    for (let host of hosts) {
-        hostString += host.ansibleName + ", ";
-    }
-    //get rid of the comma
-    hostString = hostString.slice(0, -2);
-    playbookText = playbookText.replace(/\$\((hosts.*?)\)/, hostString);
-
-    //create the temp folder
-
-    //define the folder to extract to and create it
-    let extract_folder = path.join(BASE_DIRECTORY, TEMP_EXTRACT_LOCATION, new Date().getTime().toString());
-    fs.mkdirSync(extract_folder, { recursive: true });
-
-    let fileName = playbook.playbookName.replaceAll(' ', '_');
-    fileName = fileName.replaceAll(/[^a-zA-Z0-9_]/g, '');
-    fileName = fileName + '.yaml';
-
-    //write playbook to file in the temp folder
-    await new Promise((resolve, reject) => {
-        fs.writeFile(path.join(extract_folder, fileName), playbookText, resolve);
-    });
-
-    // wait for 5 seconds
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
-    //delete the temp folder
-    await new Promise((resolve, reject) => {
-        fs.rm(extract_folder, { recursive: true }, resolve);
-    });
-
-    console.log(`Running playbook: ${path.join(extract_folder, fileName)}`);
 }

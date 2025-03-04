@@ -10,6 +10,7 @@ declare global {
 			db: Database,
 			user: User,
 			session: Session,
+			urlBeforeLogin?: string
 		}
 		// interface PageData {}
 		// interface PageState {}

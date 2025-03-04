@@ -110,8 +110,8 @@
         const response = await fetch($page.url.pathname, { method: "PATCH", body: JSON.stringify(updatePlaybook) });
 
         if (response.ok) {
+            await getAllPlaybooks();
             showHideEditModal(false);
-            getAllPlaybooks();
         } else {
             //TODO: ADD VALIDATION HERE
         }
