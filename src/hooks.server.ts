@@ -4,6 +4,7 @@ import { isNullOrUndefined } from '$lib/utils';
 import { getUserBySession, createSession } from '$lib/server/db/models/session';
 
 
+
 export const handle: Handle = async ({ event, resolve }) => {
     if (!event.locals.db) {
         // This will create the database within the `db.sqlite` file.
@@ -18,10 +19,10 @@ export const handle: Handle = async ({ event, resolve }) => {
     }
 
     //get the session key, and user if already signed in
-    let sessionKey = event.cookies.get('snmSessionKey');
-    if (isNullOrUndefined(sessionKey) === false) {
-        event.locals.user = await getUserBySession(sessionKey);
-    }
+    // let sessionKey = event.cookies.get('snmSessionKey');
+    // if (isNullOrUndefined(sessionKey) === false) {
+    //     event.locals.user = await getUserBySession(sessionKey);
+    // }
 
 
     const resp = await resolve(event);

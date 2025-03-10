@@ -27,10 +27,11 @@ export const POST: RequestHandler = async function GET({ request, url, locals })
     await addJobLog(jobId, "Starting playbook run", 0);
 
     //call the playbook
-    await callAnsiblePlaybook(jobId, dbPlaybook, apiPlaybook.hosts, apiPlaybook.variables);
+    let ansiblePlaybookReturn = await callAnsiblePlaybook(jobId, dbPlaybook, apiPlaybook.hosts, apiPlaybook.variables);
 
     //mark job as completed after playbook run
     await completeJob(jobId);
 
-    return json(dbPlaybook)
+    //return the validation object
+    return json(ansiblePlaybookReturn)
 }

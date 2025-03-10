@@ -177,7 +177,7 @@ const callAnsibleFunction = async (command: string, cwd: string = BASE_DIRECTORY
     });
     await ansiblePromise;
 
-    return { ok: isNullOrUndefined(err), stdout: out, stderr: err };
+    return { ok: isNullOrUndefined(err) || err === '', stdout: out, stderr: err };
 }
 
 
@@ -229,9 +229,30 @@ export const callAnsiblePlaybook = async (jobId: number, playbook: AnsiblePlaybo
         await new Promise((resolve, reject) => {
             fs.rm(extract_folder, { recursive: true }, resolve);
         });
+
+        //depdending on if ansible was happy
+        if (output.ok) {
+            return {
+                ok: true,
+                message: `Successfully ran \"${playbook.playbookName}\".`,
+                jobId: jobId
+            };
+        }
+        else {
+            return {
+                ok: false,
+                message: `Running playbook \"${playbook.playbookName}\" failed.`,
+                jobId: jobId
+            };
+        }
     }
     catch (ex) {
-        logError(`Error occurred running playbook ${playbook.playbookName}. Exception: ${ex}`, jobId);
+        logError(`Error occurred running playbook \"${playbook.playbookName}\". Exception: ${ex}`, jobId);
+        return {
+            ok: false,
+            message: `Error occurred running playbook ${playbook.playbookName}. Exception: ${ex}`,
+            jobId: jobId
+        };
     }
 
 }

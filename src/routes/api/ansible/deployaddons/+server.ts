@@ -21,6 +21,9 @@ export const POST: RequestHandler = async function POST({ request, locals }) {
     //create job for logging
     let logJobId = await createJob(`Deploying Addons for single host ${host.hostname}; hostname=${host.hostname}; id=${host.id}; numberOfAddons=${allAddonsForHost.length}`, locals.user.id);
 
+    //log that we are starting
+    await addJobLog(logJobId, `Starting deployment for host ${host.hostname}`);
+
     //call the function that will do this
     await amf.deployAddonsToHost(fullHost, allAddonsForHost, logJobId);
 

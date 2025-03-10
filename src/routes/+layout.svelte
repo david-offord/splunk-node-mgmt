@@ -1,5 +1,7 @@
 <script>
-    let { children } = $props();
+    let { data, children } = $props();
+
+    let username = data.user.userName;
 </script>
 
 <nav class="navbar navbar-expand-lg navbar">
@@ -27,7 +29,19 @@
                 <li class="nav-item">
                     <a class="nav-link active" aria-current="page" href="/jobs">Jobs</a>
                 </li>
+                <li class="nav-item">
+                    <a class="nav-link active" aria-current="page" href="/users">User Management</a>
+                </li>
+                <li class="d-flex me-auto">
+                    <a class="nav-link active" aria-current="page" href="/users">User Management</a>
+                </li>
             </ul>
+        </div>
+
+        <div style="">
+            <div class="d-flex justify-content-end">
+                <h4 class="nav-link">{username}</h4>
+            </div>
         </div>
     </div>
 </nav>

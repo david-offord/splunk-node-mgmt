@@ -21,6 +21,26 @@ const users = sqliteTable('users', {
     hashedPassword: text('hashed_password').notNull()
 });
 
+
+const userPermissions = sqliteTable('userPermissions', {
+    ...timestamp,
+    id: text('id')
+        .primaryKey()
+        .notNull()
+        .$defaultFn(() => generateId(15)),
+    userId: text().notNull().references(() => users.id),
+    admin: integer().$default(() => 0).notNull(),
+    hostManagement: integer().$default(() => 0).notNull(),
+    serverClassManagement: integer().$default(() => 0).notNull(),
+    addonManagement: integer().$default(() => 0).notNull(),
+    playbookManagement: integer().$default(() => 0).notNull(),
+    playbookRunning: integer().$default(() => 0).notNull(),
+    addonDeployments: integer().$default(() => 0).notNull(),
+    userManagement: integer().$default(() => 0).notNull(),
+    jobViewing: integer().$default(() => 0).notNull(),
+});
+
+
 const sessions = sqliteTable('sessions', {
     ...timestamp,
     id: text('id')
@@ -102,4 +122,4 @@ export const jobLogs = sqliteTable("jobLogs", {
 
 
 
-export { sessions, users };
+export { sessions, users, userPermissions };

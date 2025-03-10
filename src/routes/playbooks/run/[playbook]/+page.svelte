@@ -1,6 +1,7 @@
 <script lang="ts">
     import { page } from "$app/stores";
     import type { AnsiblePlaybookModel, AnsiblePlaybookModelVariables, Host } from "$lib/types";
+    import { date } from "drizzle-orm/mysql-core";
     import type { PageServerData } from "./$types";
     import { onMount } from "svelte";
 
@@ -17,6 +18,11 @@
     let playbookOriginalContents = runPlaybook.playbookContents;
     let selectedHosts: Host[] = $state([]);
     let currentlySendingToBackend = $state(false);
+
+    //for validation
+    let errorRunningPlaybook = $state(false);
+    let playbookRunMessage = $state("");
+    let lastJobId = $state(0);
 
     //validation messages
     let hostsValidationMessage = $state("");
@@ -70,7 +76,6 @@
         aceEditor.setTheme("ace/theme/monokai");
         aceEditor.session.setMode("ace/mode/yaml");
         aceEditor.setValue(runPlaybook.playbookContents, -1);
-        aceEditor.setOption("useWrapMode", true);
         aceEditor.setReadOnly(true);
     }
 
@@ -133,6 +138,8 @@
         if ([...document.querySelectorAll(".host-selection-checkbox:checked")].length === 0) {
             hostsValidationMessage = "Please select at least one host";
             error = true;
+        } else {
+            hostsValidationMessage = "";
         }
 
         //check that all required fields have a value
@@ -141,6 +148,8 @@
             if ((input as HTMLInputElement).value === "") {
                 varsValidationMessage = "Please fill in all required fields";
                 error = true;
+            } else {
+                varsValidationMessage = "";
             }
         }
 
@@ -177,11 +186,17 @@
             sendToApi.hosts.push(host);
         }
 
+        //call the playbook
         const response = await fetch($page.url.pathname, { method: "POST", body: JSON.stringify(sendToApi) });
 
-        if (response.ok) {
-        } else {
-        }
+        //get the response json, and set all the validation values
+        let data = (await response.json()) as any;
+        errorRunningPlaybook = data.ok === false;
+        playbookRunMessage = data.message;
+        lastJobId = data.jobId;
+
+        //let em run it again if they want
+        currentlySendingToBackend = false;
     }
 
     //Add all listeners
@@ -281,4 +296,18 @@
             {/if}
         </div>
     </div>
+    {#if playbookRunMessage !== ""}
+        <div class="row mt-3">
+            <div class="col-12">
+                <div class="d-flex justify-content-center">
+                    <h3 class={errorRunningPlaybook ? "text-danger" : "text-success"}>
+                        {playbookRunMessage}
+                        {#if lastJobId !== 0}
+                            <a href="/job/{lastJobId}">View Job Details</a>
+                        {/if}
+                    </h3>
+                </div>
+            </div>
+        </div>
+    {/if}
 </div>

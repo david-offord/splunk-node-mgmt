@@ -101,4 +101,8 @@ export interface JobsModel {
     id: number,
     jobDescription: string,
     startedBy: string,
+    createdOn: Date,
+    completed: boolean,
+    completedOn: Date,
+    startedByName?: string,
 }

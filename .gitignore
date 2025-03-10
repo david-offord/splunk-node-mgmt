@@ -27,6 +27,8 @@ workingdirectory/addons/*
 workingdirectory/temp/*
 SQL_QUERIES/
 
+!ansible.cfg
+
 #db files
 data.db
 data_backup.db
