@@ -3,10 +3,15 @@ import type { UserWithPermissions } from "$lib/types.ts"
 import type { RequestHandler } from './$types';
 import { createNewUser, deleteUser, updateUser } from '$lib/server/db/models/user';
 import { getUsersAndPermissions, updateUserPermissions } from '$lib/server/db/models/userPermissions';
-import { hashPassword } from '$lib/utils';
+import { canUserAccessApi, hashPassword } from '$lib/utils';
 
 //for getting all users
-export const GET: RequestHandler = async function GET({ request }) {
+export const GET: RequestHandler = async function GET({ request, locals, url }) {
+    let canAccess = canUserAccessApi(locals.userPermissions, url.pathname, request.method);
+    if (!canAccess) {
+        return json({ error: "You do not have permission to access this API" }, { status: 403 });
+    }
+
     try {
         //get all addons
         let allusers = await getUsersAndPermissions();
@@ -24,7 +29,12 @@ export const GET: RequestHandler = async function GET({ request }) {
 }
 
 //create new user
-export const POST: RequestHandler = async function POST({ request }) {
+export const POST: RequestHandler = async function POST({ request, locals, url }) {
+    let canAccess = canUserAccessApi(locals.userPermissions, url.pathname, request.method);
+    if (!canAccess) {
+        return json({ error: "You do not have permission to access this API" }, { status: 403 });
+    }
+
     try {
         let user: UserWithPermissions = await request.json();
 
@@ -48,7 +58,12 @@ export const POST: RequestHandler = async function POST({ request }) {
 }
 
 //for updating user
-export const PATCH: RequestHandler = async function PATH({ request }) {
+export const PATCH: RequestHandler = async function PATH({ request, locals, url }) {
+    let canAccess = canUserAccessApi(locals.userPermissions, url.pathname, request.method);
+    if (!canAccess) {
+        return json({ error: "You do not have permission to access this API" }, { status: 403 });
+    }
+
     try {
         let user: UserWithPermissions = await request.json();
 

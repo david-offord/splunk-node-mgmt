@@ -1,8 +1,9 @@
-import { isNullOrUndefined } from '$lib/utils';
+import { canUserAccessView, isNullOrUndefined } from '$lib/utils';
 import { redirect } from '@sveltejs/kit';
 import type { LayoutServerLoad } from './$types'
 import { getUserBySession } from '$lib/server/db/models/session';
 import { getUserPermissions } from '$lib/server/db/models/userPermissions';
+import { error } from '@sveltejs/kit';
 
 const URLS_THAT_REQUIRE_NO_AUTH = ['/login']
 
@@ -28,6 +29,11 @@ export const load: LayoutServerLoad = async ({ url, locals, cookies }) => {
         }
 
         throw redirect(301, '/login');
+    }
+
+    let canAccess = canUserAccessView(locals.userPermissions, url.pathname);
+    if (!canAccess) {
+        throw error(404);
     }
 
     if (isNullOrUndefined(locals.urlBeforeLogin) === false) {

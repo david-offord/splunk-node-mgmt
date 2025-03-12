@@ -1,10 +1,11 @@
 import type { PageServerLoad } from './$types';
 import type { Host } from "$lib/types.ts"
-import { isNullOrUndefined } from '$lib/utils';
+import { isNullOrUndefined, canUserAccessView } from '$lib/utils';
 import { getHosts } from '$lib/server/db/models/hosts';
 import { getServerClasses, getServerClassByHosts } from '$lib/server/db/models/serverClass';
+import { redirect } from '@sveltejs/kit';
 
-export const load: PageServerLoad = async ({ locals }) => {
+export const load: PageServerLoad = async ({ locals, url }) => {
     //GET HOST INFORMATION
     let rowInformation = await getHosts('', 0, 10);
     let rows = rowInformation.rows as Host[];
