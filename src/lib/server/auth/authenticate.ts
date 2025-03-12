@@ -13,7 +13,11 @@ const checkIfUsernamePasswordValid = async (login: LoginModel) => {
     let hashedPassword = crypto.hash('sha256', login.password);
 
     //see if there is a match
-    let val = await db.select().from(users).where(and(eq(users.hashedPassword, hashedPassword), eq(users.email, login.username))).get();
+    let val = await db
+        .select()
+        .from(users)
+        .where(and(eq(users.hashedPassword, hashedPassword), eq(users.email, login.username), eq(users.disabled, 0)))
+        .get();
 
     //if there was no match, return false
     if (isNullOrUndefined(val))

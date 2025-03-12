@@ -1,3 +1,4 @@
+import type { UserWithPermissions } from '$lib/types';
 import type { User } from 'lucia';
 import type { Database } from 'sqlite3'
 
@@ -9,6 +10,7 @@ declare global {
 		interface Locals {
 			db: Database,
 			user: User,
+			userPermissions: UserWithPermissions,
 			session: Session,
 			urlBeforeLogin?: string
 		}

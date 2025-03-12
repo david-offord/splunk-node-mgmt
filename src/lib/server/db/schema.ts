@@ -18,7 +18,8 @@ const users = sqliteTable('users', {
         .$defaultFn(() => generateId(15)),
     name: text('name').notNull().default("Not Found"),
     email: text('email').unique().notNull(),
-    hashedPassword: text('hashed_password').notNull()
+    hashedPassword: text('hashed_password').notNull(),
+    disabled: integer().$default(() => 0).notNull(),
 });
 
 

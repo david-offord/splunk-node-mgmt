@@ -2,6 +2,7 @@ import { isNullOrUndefined } from '$lib/utils';
 import { redirect } from '@sveltejs/kit';
 import type { LayoutServerLoad } from './$types'
 import { getUserBySession } from '$lib/server/db/models/session';
+import { getUserPermissions } from '$lib/server/db/models/userPermissions';
 
 const URLS_THAT_REQUIRE_NO_AUTH = ['/login']
 
@@ -12,6 +13,12 @@ export const load: LayoutServerLoad = async ({ url, locals, cookies }) => {
     if (isNullOrUndefined(sessionKey) === false) {
         locals.user = await getUserBySession(sessionKey);
     }
+
+
+    if (locals.user)
+        locals.userPermissions = await getUserPermissions(locals.user.id);
+    else
+        locals.userPermissions = null;
 
     //if they arent authed, and the url is not in the list of ones that dont require auth
     if (isNullOrUndefined(locals.user) && URLS_THAT_REQUIRE_NO_AUTH.indexOf(url.pathname) === -1) {
@@ -33,6 +40,7 @@ export const load: LayoutServerLoad = async ({ url, locals, cookies }) => {
         user: {
             //@ts-ignore
             userName: locals.user?.name
-        }
+        },
+        permissions: locals.userPermissions
     };
 }

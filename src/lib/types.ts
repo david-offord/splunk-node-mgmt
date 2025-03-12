@@ -106,3 +106,23 @@ export interface JobsModel {
     completedOn: Date,
     startedByName?: string,
 }
+
+export interface UserWithPermissions {
+    addonDeployments?: number,
+    addonManagement?: number,
+    admin?: number,
+    createdAt?: Date,
+    disabled?: number,
+    email?: string,
+    hashedPassword?: string,
+    hostManagement?: number,
+    id?: string,
+    jobViewing?: number,
+    name?: string,
+    playbookManagement?: number,
+    playbookRunning?: number,
+    serverClassManagement?: number,
+    updatedAt?: Date,
+    userId?: string,
+    userManagement?: number,
+}

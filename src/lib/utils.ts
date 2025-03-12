@@ -1,6 +1,7 @@
 import { exec } from 'child_process';
 import { addJobLog } from './server/db/models/jobs';
 import { LogLevel } from './enums';
+import * as crypto from 'crypto';
 
 export function isNullOrUndefined(value: any): boolean {
     return value === null || value === undefined;
@@ -101,4 +102,9 @@ export const parseAnsibleOutput = (output: string) => {
         parsedObj['ok'] = false;
 
     return parsedObj;
+}
+
+export const hashPassword = (unhashedPassword: string) => {
+    let hashedPassword = crypto.hash('sha256', unhashedPassword);
+    return hashedPassword;
 }

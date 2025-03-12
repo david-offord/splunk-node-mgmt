@@ -1,7 +1,11 @@
-<script>
+<script lang="ts">
+    import { AddOnManagementPermissions, HostManagementPermissions, PlaybookManagementPermissions, ServerClassManagementPermissions, UserManagementPermissions } from "$lib/enums";
+    import type { UserWithPermissions } from "$lib/types.js";
+
     let { data, children } = $props();
 
     let username = data.user.userName;
+    let permissions: UserWithPermissions = data.permissions;
 </script>
 
 <nav class="navbar navbar-expand-lg navbar">
@@ -14,27 +18,36 @@
 
         <div class="collapse navbar-collapse" id="navbarNav">
             <ul class="navbar-nav">
-                <li class="nav-item">
-                    <a class="nav-link active" aria-current="page" href="/">Host Manager</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link active" aria-current="page" href="/serverclass">Server Classes</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link active" aria-current="page" href="/addons">Add-on Manager</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link active" aria-current="page" href="/playbooks">Playbook Manager</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link active" aria-current="page" href="/jobs">Jobs</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link active" aria-current="page" href="/users">User Management</a>
-                </li>
-                <li class="d-flex me-auto">
-                    <a class="nav-link active" aria-current="page" href="/users">User Management</a>
-                </li>
+                {#if permissions !== null && permissions.hostManagement !== HostManagementPermissions.None}
+                    <li class="nav-item">
+                        <a class="nav-link active" aria-current="page" href="/">Host Manager</a>
+                    </li>
+                {/if}
+                {#if permissions !== null && permissions.serverClassManagement !== ServerClassManagementPermissions.None}
+                    <li class="nav-item">
+                        <a class="nav-link active" aria-current="page" href="/serverclass">Server Classes</a>
+                    </li>
+                {/if}
+                {#if permissions !== null && permissions.addonManagement !== AddOnManagementPermissions.None}
+                    <li class="nav-item">
+                        <a class="nav-link active" aria-current="page" href="/addons">Add-on Manager</a>
+                    </li>
+                {/if}
+                {#if permissions !== null && permissions.playbookManagement !== PlaybookManagementPermissions.None}
+                    <li class="nav-item">
+                        <a class="nav-link active" aria-current="page" href="/playbooks">Playbook Manager</a>
+                    </li>
+                {/if}
+                {#if permissions !== null && permissions.userManagement !== UserManagementPermissions.None}
+                    <li class="nav-item">
+                        <a class="nav-link active" aria-current="page" href="/jobs">Jobs</a>
+                    </li>
+                {/if}
+                {#if permissions !== null && permissions.userManagement !== UserManagementPermissions.None}
+                    <li class="nav-item">
+                        <a class="nav-link active" aria-current="page" href="/users">User Management</a>
+                    </li>
+                {/if}
             </ul>
         </div>
 
