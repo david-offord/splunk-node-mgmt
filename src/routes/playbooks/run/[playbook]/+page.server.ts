@@ -4,7 +4,7 @@ import type { AnsiblePlaybookModel } from '$lib/types';
 import type { PageServerLoad } from './$types';
 
 
-export const load: PageServerLoad = async ({ params }) => {
+export const load: PageServerLoad = async ({ params, parent }) => {
 
     //get the playbook name first
     let playbookId = parseInt(params.playbook);
@@ -15,6 +15,7 @@ export const load: PageServerLoad = async ({ params }) => {
     let allHosts = await getHosts();
 
     return {
+        parent: await parent(),
         playbook: playbook,
         hosts: allHosts.rows
     }

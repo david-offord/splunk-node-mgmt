@@ -181,7 +181,7 @@
                         <td>
                             {#if user.disabled !== 1}
                                 <button
-                                    class="ms-1 table-button"
+                                    class="btn btn-table-action me-2"
                                     onclick={() => {
                                         showModalUser(true, user);
                                     }}
@@ -190,7 +190,7 @@
                                     <i class="bi bi-pencil"></i>
                                 </button>
                                 <button
-                                    class="ms-3 table-button"
+                                    class="btn btn-table-action me-2"
                                     onclick={() => {
                                         showHideDeleteModal(true, user);
                                     }}

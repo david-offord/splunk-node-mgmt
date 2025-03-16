@@ -4,7 +4,7 @@ import type { AnsiblePlaybookModel, JobsModel } from '$lib/types';
 import type { PageServerLoad } from './$types';
 
 
-export const load: PageServerLoad = async ({ params, locals }) => {
+export const load: PageServerLoad = async ({ params, locals, parent }) => {
 
     //get job id
     let jobId = parseInt(params.jobId);
@@ -17,6 +17,7 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 
 
     return {
+        parent: await parent(),
         job: job,
         jobLogs: jobLogs
     }

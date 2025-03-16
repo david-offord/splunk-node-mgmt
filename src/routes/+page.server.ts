@@ -5,7 +5,7 @@ import { getHosts } from '$lib/server/db/models/hosts';
 import { getServerClasses, getServerClassByHosts } from '$lib/server/db/models/serverClass';
 import { redirect } from '@sveltejs/kit';
 
-export const load: PageServerLoad = async ({ locals, url }) => {
+export const load: PageServerLoad = async ({ locals, url, parent }) => {
     //GET HOST INFORMATION
     let rowInformation = await getHosts('', 0, 10);
     let rows = rowInformation.rows as Host[];
@@ -41,6 +41,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 
 
     return {
+        parent: await parent(),
         hosts: rows,
         hostCount: rowCount,
         allPossibleServerClasses: allServerClasses

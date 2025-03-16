@@ -1,14 +1,16 @@
 <script lang="ts">
-    import type { AddOn, Host, ServerClasses, ValidationObject } from "$lib/types";
+    import type { AddOn, Host, ServerClasses, UserWithPermissions, ValidationObject } from "$lib/types";
     import type { PageServerData } from "./$types";
     import type { Modal } from "bootstrap";
     import type * as bootstrap from "bootstrap";
     import { page } from "$app/stores";
     import { redirect } from "@sveltejs/kit";
     import type { Server } from "http";
+    import { ServerClassManagementPermissions } from "$lib/enums";
 
     //get the hosts from the db
     let { data, form }: { data: PageServerData; form: FormData } = $props();
+    let permissions: UserWithPermissions = data.parent.permissions;
     let serverClasses = $state(data.serverClasses);
 
     //for modal addon/host selection
@@ -299,7 +301,9 @@
                 <th>Name</th>
                 <th>Number of Hosts Assigned</th>
                 <th>Add-ons Assigned</th>
-                <th>Actions</th>
+                {#if permissions.serverClassManagement === ServerClassManagementPermissions.CanEdit}
+                    <th>Actions</th>
+                {/if}
             </tr>
         </thead>
         <tbody>
@@ -310,183 +314,192 @@
                     </td>
                     <td>
                         {serverclass.hostsAssigned.length}
-                        <button
-                            class="ms-3"
-                            aria-label="Edit Assigned Hosts"
-                            onclick={() => {
-                                showModalHostExistingServerClass(serverclass);
-                            }}
-                        >
-                            <i class="bi bi-pencil"></i>
-                        </button>
+                        {#if permissions.serverClassManagement === ServerClassManagementPermissions.CanEdit}
+                            <button
+                                class="btn btn-table-action ms-2"
+                                aria-label="Edit Assigned Hosts"
+                                onclick={() => {
+                                    showModalHostExistingServerClass(serverclass);
+                                }}
+                            >
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                        {/if}
                     </td>
                     <td>
                         {serverclass.addonsAssigned.length}
-                        <button
-                            class="ms-3"
-                            aria-label="Edit Assigned Hosts"
-                            onclick={() => {
-                                showModalHostExistingServerClass(serverclass, false);
-                            }}
-                        >
-                            <i class="bi bi-pencil"></i>
-                        </button>
+
+                        {#if permissions.serverClassManagement === ServerClassManagementPermissions.CanEdit}
+                            <button
+                                class="btn btn-table-action ms-2"
+                                aria-label="Edit Assigned Hosts"
+                                onclick={() => {
+                                    showModalHostExistingServerClass(serverclass, false);
+                                }}
+                            >
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                        {/if}
                     </td>
-                    <td>
-                        <button class="ms-1" aria-label="Refresh Hosts">
-                            <i class="bi bi-arrow-counterclockwise"></i>
-                        </button>
-                        <button
-                            class="ms-3"
-                            onclick={() => {
-                                showHideDeleteModal(true, serverclass);
-                            }}
-                            aria-label="Delete Host"
-                        >
-                            <i class="bi bi-trash"></i>
-                        </button>
-                    </td>
+                    {#if permissions.serverClassManagement === ServerClassManagementPermissions.CanEdit}
+                        <td>
+                            <button class="btn btn-table-action me-2" aria-label="Refresh Hosts">
+                                <i class="bi bi-arrow-counterclockwise"></i>
+                            </button>
+                            <button
+                                class="btn btn-table-action me-2"
+                                onclick={() => {
+                                    showHideDeleteModal(true, serverclass);
+                                }}
+                                aria-label="Delete Host"
+                            >
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </td>
+                    {/if}
                 </tr>
             {/each}
         </tbody>
     </table>
 </div>
 
-<!--Edit modal-->
-<div class="modal fade" id="serverClassModal" tabindex="-1" aria-labelledby="serverClassModal" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="exampleModalLabel">Manage Server Class {currentEditingServerClass?.name}'s {editingHosts ? "Hosts" : "Addons"}</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <form>
-                    <div class="row">
-                        <div class="col-5">
-                            <select id="unselectedHostSelect" multiple style="height: 30em; width: 100%">
-                                {#if editingHosts}
-                                    {#each unselectedHosts as ps}
-                                        <option value={ps.id}>{ps.hostname}</option>
-                                    {/each}
-                                {:else}
-                                    {#each unselectedAddons as as}
-                                        <option value={as.id}>{as.displayName}</option>
-                                    {/each}
-                                {/if}
-                            </select>
-                        </div>
-                        <div class="col-2 d-flex align-items-center justify-content-center">
-                            <button
-                                onclick={() => {
-                                    moveHostToLeftModal();
-                                }}>&lt;</button
-                            >
-                            <br />
-                            <button
-                                onclick={() => {
-                                    moveHostToRightModal();
-                                }}>&gt;</button
-                            >
-                        </div>
-                        <div class="col-5">
-                            <select id="selectedHostSelect" multiple style="height: 30em;  width: 100%">
-                                {#if editingHosts}
-                                    {#each selectedHosts as ps}
-                                        <option value={ps.id}>{ps.hostname}</option>
-                                    {/each}
-                                {:else}
-                                    {#each selectedAddons as as}
-                                        <option value={as.id}>{as.displayName}</option>
-                                    {/each}
-                                {/if}
-                            </select>
-                        </div>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <button
-                    type="submit"
-                    class="btn btn-primary"
-                    onclick={() => {
-                        saveModalChanges();
-                    }}>Save changes</button
-                >
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="modal fade" id="newServerClassModal" tabindex="-1" aria-labelledby="newServerClassModal" aria-hidden="true">
-    <div class="modal-dialog modal-sm">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="exampleModalLabel">Create Server Class</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <form>
-                    <div class="row">
-                        <div class="col-12">
-                            <div class="mb-3">
-                                <label for="newServerClassName" class="form-label">Server Class Name</label>
-                                <input bind:value={newServerClassInput} class="form-control" id="newServerClassName" />
+{#if permissions.serverClassManagement === ServerClassManagementPermissions.CanEdit}
+    <!--Edit modal-->
+    <div class="modal fade" id="serverClassModal" tabindex="-1" aria-labelledby="serverClassModal" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="exampleModalLabel">Manage Server Class {currentEditingServerClass?.name}'s {editingHosts ? "Hosts" : "Addons"}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form>
+                        <div class="row">
+                            <div class="col-5">
+                                <select id="unselectedHostSelect" multiple style="height: 30em; width: 100%">
+                                    {#if editingHosts}
+                                        {#each unselectedHosts as ps}
+                                            <option value={ps.id}>{ps.hostname}</option>
+                                        {/each}
+                                    {:else}
+                                        {#each unselectedAddons as as}
+                                            <option value={as.id}>{as.displayName}</option>
+                                        {/each}
+                                    {/if}
+                                </select>
+                            </div>
+                            <div class="col-2 d-flex align-items-center justify-content-center">
+                                <button
+                                    onclick={() => {
+                                        moveHostToLeftModal();
+                                    }}>&lt;</button
+                                >
+                                <br />
+                                <button
+                                    onclick={() => {
+                                        moveHostToRightModal();
+                                    }}>&gt;</button
+                                >
+                            </div>
+                            <div class="col-5">
+                                <select id="selectedHostSelect" multiple style="height: 30em;  width: 100%">
+                                    {#if editingHosts}
+                                        {#each selectedHosts as ps}
+                                            <option value={ps.id}>{ps.hostname}</option>
+                                        {/each}
+                                    {:else}
+                                        {#each selectedAddons as as}
+                                            <option value={as.id}>{as.displayName}</option>
+                                        {/each}
+                                    {/if}
+                                </select>
                             </div>
                         </div>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <button
-                    type="submit"
-                    class="btn btn-primary"
-                    onclick={() => {
-                        saveNewServerClass();
-                    }}>Save New Server Class</button
-                >
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="modal fade" id="deleteServerClassModal" tabindex="-1" aria-labelledby="deleteServerClassModal" aria-hidden="true">
-    <div class="modal-dialog modal-sm">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="exampleModalLabel">Confirm Deletion of {deleteServerClassObject?.name}</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <form>
-                    <div class="row">
-                        <div class="col-6">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                        </div>
-                        <div class="col-6">
-                            <button
-                                type="submit"
-                                class="btn btn-danger"
-                                onclick={() => {
-                                    deleteServerClass(deleteServerClassObject);
-                                }}>Confirm</button
-                            >
-                        </div>
-                    </div>
-                </form>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button
+                        type="submit"
+                        class="btn btn-primary"
+                        onclick={() => {
+                            saveModalChanges();
+                        }}>Save changes</button
+                    >
+                </div>
             </div>
         </div>
     </div>
-</div>
 
-<span id="TestFloatingAdd">
-    <button
-        class="btn btn-success btn-lg"
-        type="button"
-        onclick={() => {
-            showModalHostNewServerClass();
-        }}>Add</button
-    >
-</span>
+    <div class="modal fade" id="newServerClassModal" tabindex="-1" aria-labelledby="newServerClassModal" aria-hidden="true">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="exampleModalLabel">Create Server Class</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form>
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="mb-3">
+                                    <label for="newServerClassName" class="form-label">Server Class Name</label>
+                                    <input bind:value={newServerClassInput} class="form-control" id="newServerClassName" />
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button
+                        type="submit"
+                        class="btn btn-primary"
+                        onclick={() => {
+                            saveNewServerClass();
+                        }}>Save New Server Class</button
+                    >
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="deleteServerClassModal" tabindex="-1" aria-labelledby="deleteServerClassModal" aria-hidden="true">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="exampleModalLabel">Confirm Deletion of {deleteServerClassObject?.name}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form>
+                        <div class="row">
+                            <div class="col-6">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            </div>
+                            <div class="col-6">
+                                <button
+                                    type="submit"
+                                    class="btn btn-danger"
+                                    onclick={() => {
+                                        deleteServerClass(deleteServerClassObject);
+                                    }}>Confirm</button
+                                >
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <span id="TestFloatingAdd">
+        <button
+            class="btn btn-success btn-lg"
+            type="button"
+            onclick={() => {
+                showModalHostNewServerClass();
+            }}>Add</button
+        >
+    </span>
+{/if}

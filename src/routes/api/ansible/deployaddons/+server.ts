@@ -10,7 +10,13 @@ import { log } from 'console';
 import { addJobLog, completeJob, createJob } from '$lib/server/db/models/jobs';
 
 //for updating/adding host
-export const POST: RequestHandler = async function POST({ request, locals }) {
+export const POST: RequestHandler = async function POST({ request, url, locals }) {
+    let canAccess = utils.canUserAccessApi(locals.userPermissions, url.pathname, request.method);
+    if (!canAccess) {
+        return json({ error: "You do not have permission to access this API" }, { status: 403 });
+    }
+
+
     let host = await request.json() as Host;
 
 

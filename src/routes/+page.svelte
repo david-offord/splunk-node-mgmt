@@ -1,5 +1,5 @@
 <script lang="ts">
-    import type { Host, ServerClasses, ValidationObject } from "$lib/types";
+    import type { Host, ServerClasses, UserWithPermissions, ValidationObject } from "$lib/types";
     import { DEPLOY_ADDON_AD_HOC_ROUTE } from "$lib/constants";
     import type { PageServerData } from "./$types";
     import type { Modal } from "bootstrap";
@@ -7,9 +7,11 @@
     import { page } from "$app/stores";
     import { onMount } from "svelte";
     import type { Server } from "http";
+    import { AddonDeploymentPermissions, HostManagementPermissions } from "$lib/enums";
 
     //get the hosts from the db
     let { data, form }: { data: PageServerData; form: FormData } = $props();
+    let permissions: UserWithPermissions = data.parent.permissions;
     let hosts = $state(data.hosts);
     let visibleHosts = $state(data.hosts);
 
@@ -380,7 +382,9 @@
                         <th>Hostname</th>
                         <th>Ip Address</th>
                         <th>Customer Code</th>
-                        <th>Actions</th>
+                        {#if permissions.hostManagement === HostManagementPermissions.CanEdit || permissions.addonDeployments === AddonDeploymentPermissions.CanRun}
+                            <th>Actions</th>
+                        {/if}
                     </tr>
                 </thead>
                 <tbody>
@@ -389,17 +393,25 @@
                             <td>{host.hostname}</td>
                             <td>{host.ipAddress}</td>
                             <td>{host.customerCode}</td>
-                            <td>
-                                <button aria-label="Edit Host" data-bs-toggle="tooltip" data-placement="top" title="Edit Host" onclick={() => setModalValues(host.id)}>
-                                    <i class="bi bi-pencil"></i>
-                                </button>
-                                <button id="RedeployAddons_{host.id}" aria-label="Redeploy Add-ons" data-bs-toggle="tooltip" data-placement="top" title="Redeploy Add-ons" onclick={() => redeployAddOns(host)}>
-                                    <i class="bi bi-arrow-up-right"></i>
-                                </button>
-                                <button aria-label="Delete Host" data-bs-toggle="tooltip" data-placement="top" title="Delete Host" onclick={() => confirmHostDeletion(host)}>
-                                    <i class="bi bi-trash"></i>
-                                </button>
-                            </td>
+                            {#if permissions.hostManagement === HostManagementPermissions.CanEdit || permissions.addonDeployments === AddonDeploymentPermissions.CanRun}
+                                <td>
+                                    {#if permissions.hostManagement === HostManagementPermissions.CanEdit}
+                                        <button class="btn btn-table-action me-2" aria-label="Edit Host" data-bs-toggle="tooltip" data-placement="top" title="Edit Host" onclick={() => setModalValues(host.id)}>
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                    {/if}
+                                    {#if permissions.addonDeployments === AddonDeploymentPermissions.CanRun}
+                                        <button class="btn btn-table-action me-2" id="RedeployAddons_{host.id}" aria-label="Redeploy Add-ons" data-bs-toggle="tooltip" data-placement="top" title="Redeploy Add-ons" onclick={() => redeployAddOns(host)}>
+                                            <i class="bi bi-arrow-up-right"></i>
+                                        </button>
+                                    {/if}
+                                    {#if permissions.hostManagement === HostManagementPermissions.CanEdit}
+                                        <button class="btn btn-table-action me-2" aria-label="Delete Host" data-bs-toggle="tooltip" data-placement="top" title="Delete Host" onclick={() => confirmHostDeletion(host)}>
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    {/if}
+                                </td>
+                            {/if}
                         </tr>
                     {/each}
                 </tbody>
@@ -432,171 +444,178 @@
     </div>
 </div>
 
-<!--Edit modal-->
-<div class="modal fade" id="hostEditModal" tabindex="-1" aria-labelledby="hostEditModal" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="exampleModalLabel">Modal title</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <form>
-                    <div class="row">
-                        <div class="col-6">
-                            <label for="inputHostname" class="form-label">Hostname</label>
-                            <input bind:value={modalHostVal} type="text" required class="form-control" id="inputHostname" />
-                            <label for="inputHostname" class="form-label form-validation-message {modalValidation?.hostname == null ? 'd-none' : ''}">{modalValidation?.hostname}</label>
+{#if permissions.hostManagement === HostManagementPermissions.CanEdit}
+    <!--Edit modal-->
+    <div class="modal fade" id="hostEditModal" tabindex="-1" aria-labelledby="hostEditModal" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="exampleModalLabel">Modal title</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form>
+                        <div class="row">
+                            <div class="col-6">
+                                <label for="inputHostname" class="form-label">Hostname</label>
+                                <input bind:value={modalHostVal} type="text" required class="form-control" id="inputHostname" />
+                                <label for="inputHostname" class="form-label form-validation-message {modalValidation?.hostname == null ? 'd-none' : ''}">{modalValidation?.hostname}</label>
+                            </div>
+                            <div class="col-6">
+                                <label for="inputIpAddress" class="form-label">IP Address</label>
+                                <input bind:value={modalIpVal} type="text" required class="form-control" id="inputIpAddress" />
+                                <label for="inputHostname" class="form-label form-validation-message {modalValidation?.ipAddress == null ? 'd-none' : ''}">{modalValidation?.ipAddress}</label>
+                            </div>
                         </div>
-                        <div class="col-6">
-                            <label for="inputIpAddress" class="form-label">IP Address</label>
-                            <input bind:value={modalIpVal} type="text" required class="form-control" id="inputIpAddress" />
-                            <label for="inputHostname" class="form-label form-validation-message {modalValidation?.ipAddress == null ? 'd-none' : ''}">{modalValidation?.ipAddress}</label>
+                        <div class="row mt-4">
+                            <div class="col-6">
+                                <label for="inputLinuxUsername" class="form-label">Linux Username</label>
+                                <input bind:value={modalLinuxUsernameVal} id="inputLinuxUsername" type="text" required class="form-control" />
+                                <label for="inputHostname" class="form-label form-validation-message {modalValidation?.linuxUsername == null ? 'd-none' : ''}">{modalValidation?.linuxUsername}</label>
+                            </div>
+                            <div class="col-6">
+                                <label for="inputCustomerCode" class="form-label">Customer Code</label>
+                                <input bind:value={modalCustomerCodeVal} type="text" required class="form-control" id="inputCustomerCode" />
+                                <label for="inputHostname" class="form-label form-validation-message {modalValidation?.customerCode == null ? 'd-none' : ''}">{modalValidation?.customerCode}</label>
+                            </div>
                         </div>
-                    </div>
-                    <div class="row mt-4">
-                        <div class="col-6">
-                            <label for="inputLinuxUsername" class="form-label">Linux Username</label>
-                            <input bind:value={modalLinuxUsernameVal} id="inputLinuxUsername" type="text" required class="form-control" />
-                            <label for="inputHostname" class="form-label form-validation-message {modalValidation?.linuxUsername == null ? 'd-none' : ''}">{modalValidation?.linuxUsername}</label>
+                        <div class="row mt-4">
+                            <div class="col-6">
+                                <label for="inputLinuxPassword" class="form-label">Linux Password</label>
+                                <input bind:value={modalLinuxPasswordVal} type="text" id="inputLinuxPassword" class="form-control" aria-describedby="linuxPasswordHelpBlock" />
+                                <div id="linuxPasswordHelpBlock" class="form-text">Leave empty to keep current value.</div>
+                                <label for="inputHostname" class="form-label form-validation-message {modalValidation?.linuxPassword == null ? 'd-none' : ''}">{modalValidation?.linuxPassword}</label>
+                            </div>
+                            <div class="col-6">
+                                <label for="inputSplunkPassword" class="form-label">Splunk Password</label>
+                                <input bind:value={modalSplunkPasswordVal} id="inputSplunkPassword" type="text" class="form-control" aria-describedby="splunkPasswordHelpBlock" />
+                                <div id="splunkPasswordHelpBlock" class="form-text">Leave empty to keep current value.</div>
+                                <label for="inputSplunkPassword" class="form-label form-validation-message {modalValidation?.splunkPassword == null ? 'd-none' : ''}">{modalValidation?.splunkPassword}</label>
+                            </div>
                         </div>
-                        <div class="col-6">
-                            <label for="inputCustomerCode" class="form-label">Customer Code</label>
-                            <input bind:value={modalCustomerCodeVal} type="text" required class="form-control" id="inputCustomerCode" />
-                            <label for="inputHostname" class="form-label form-validation-message {modalValidation?.customerCode == null ? 'd-none' : ''}">{modalValidation?.customerCode}</label>
+                        <div class="row mt-4">
+                            <div class="col-12">
+                                <label for="inputSplunkhomePath" class="form-label">SPLUNK_HOME/etc/apps path</label>
+                                <input bind:value={modalSplunkHomePathVal} id="inputSplunkhomePath" type="text" class="form-control" aria-describedby="splunkHomePathHelp" />
+                                <div id="splunkHomePathHelp" class="form-text">The equivalent of "/opt/splunk/etc/apps" in a standard installation of splunk.</div>
+                                <label for="inputSplunkhomePath" class="form-label form-validation-message {modalValidation?.splunkHomePath == null ? 'd-none' : ''}">{modalValidation?.splunkHomePath}</label>
+                            </div>
                         </div>
-                    </div>
-                    <div class="row mt-4">
-                        <div class="col-6">
-                            <label for="inputLinuxPassword" class="form-label">Linux Password</label>
-                            <input bind:value={modalLinuxPasswordVal} type="text" id="inputLinuxPassword" class="form-control" aria-describedby="linuxPasswordHelpBlock" />
-                            <div id="linuxPasswordHelpBlock" class="form-text">Leave empty to keep current value.</div>
-                            <label for="inputHostname" class="form-label form-validation-message {modalValidation?.linuxPassword == null ? 'd-none' : ''}">{modalValidation?.linuxPassword}</label>
+                        <div class="row mt-4">
+                            <div class="col-6">
+                                <label for="inputSplunkRestartCommandHelp" class="form-label">Splunk Restart Command</label>
+                                <input bind:value={modalSplunkRestartCommand} id="inputSplunkRestartCommand" type="text" class="form-control" aria-describedby="splunkHomePathHelp" />
+                                <div id="inputSplunkRestartCommandHelp" class="form-text">The equivalent of "/opt/splunk/bin/splunk restart" in a standard installation of Splunk.</div>
+                                <label for="inputSplunkRestartCommandHelp" class="form-label form-validation-message {modalValidation?.splunkRestartCommand == null ? 'd-none' : ''}">{modalValidation?.splunkRestartCommand}</label>
+                            </div>
+                            <div class="col-6">
+                                <label for="inputSplunkManagementPort" class="form-label">Splunk Management Port</label>
+                                <input bind:value={modalSplunkManagementPort} id="inputSplunkManagementPort" type="text" class="form-control" aria-describedby="splunkHomePathHelp" />
+                                <div id="inputSplunkManagementPortHelp" class="form-text">Typically 8089.</div>
+                                <label for="inputSplunkManagementPortHelp" class="form-label form-validation-message {modalValidation?.splunkManagementPort == null ? 'd-none' : ''}">{modalValidation?.splunkManagementPort}</label>
+                            </div>
                         </div>
-                        <div class="col-6">
-                            <label for="inputSplunkPassword" class="form-label">Splunk Password</label>
-                            <input bind:value={modalSplunkPasswordVal} id="inputSplunkPassword" type="text" class="form-control" aria-describedby="splunkPasswordHelpBlock" />
-                            <div id="splunkPasswordHelpBlock" class="form-text">Leave empty to keep current value.</div>
-                            <label for="inputSplunkPassword" class="form-label form-validation-message {modalValidation?.splunkPassword == null ? 'd-none' : ''}">{modalValidation?.splunkPassword}</label>
+                        <p class="form-label form-validation-message">{modalValidation?.generalError}</p>
+                        <hr class="mt-3" />
+                        <div class="row mt-2">
+                            <div class="col-12 d-flex justify-content-center align-items-center">
+                                <h5 class="">Server Classes</h5>
+                            </div>
                         </div>
-                    </div>
-                    <div class="row mt-4">
-                        <div class="col-12">
-                            <label for="inputSplunkhomePath" class="form-label">SPLUNK_HOME/etc/apps path</label>
-                            <input bind:value={modalSplunkHomePathVal} id="inputSplunkhomePath" type="text" class="form-control" aria-describedby="splunkHomePathHelp" />
-                            <div id="splunkHomePathHelp" class="form-text">The equivalent of "/opt/splunk/etc/apps" in a standard installation of splunk.</div>
-                            <label for="inputSplunkhomePath" class="form-label form-validation-message {modalValidation?.splunkHomePath == null ? 'd-none' : ''}">{modalValidation?.splunkHomePath}</label>
+                        <div class="row">
+                            <div class="col-5">
+                                <select id="unselectServerClasses" multiple style="height: 30em; width: 100%">
+                                    {#each unselectedServerClasses as sc}
+                                        <option value={sc.id}>{sc.name}</option>
+                                    {/each}
+                                </select>
+                            </div>
+                            <div class="col-2 d-flex align-items-center justify-content-center">
+                                <button
+                                    onclick={() => {
+                                        moveServerClassToLeftSelect();
+                                    }}>&lt;</button
+                                >
+                                <br />
+                                <button
+                                    onclick={() => {
+                                        moveServerClassToRightSelect();
+                                    }}>&gt;</button
+                                >
+                            </div>
+                            <div class="col-5">
+                                <select id="selectServerClasses" multiple style="height: 30em;  width: 100%">
+                                    {#each selectedServerClasses as sc}
+                                        <option value={sc.id}>{sc.name}</option>
+                                    {/each}
+                                </select>
+                            </div>
                         </div>
-                    </div>
-                    <div class="row mt-4">
-                        <div class="col-6">
-                            <label for="inputSplunkRestartCommandHelp" class="form-label">Splunk Restart Command</label>
-                            <input bind:value={modalSplunkRestartCommand} id="inputSplunkRestartCommand" type="text" class="form-control" aria-describedby="splunkHomePathHelp" />
-                            <div id="inputSplunkRestartCommandHelp" class="form-text">The equivalent of "/opt/splunk/bin/splunk restart" in a standard installation of Splunk.</div>
-                            <label for="inputSplunkRestartCommandHelp" class="form-label form-validation-message {modalValidation?.splunkRestartCommand == null ? 'd-none' : ''}">{modalValidation?.splunkRestartCommand}</label>
-                        </div>
-                        <div class="col-6">
-                            <label for="inputSplunkManagementPort" class="form-label">Splunk Management Port</label>
-                            <input bind:value={modalSplunkManagementPort} id="inputSplunkManagementPort" type="text" class="form-control" aria-describedby="splunkHomePathHelp" />
-                            <div id="inputSplunkManagementPortHelp" class="form-text">Typically 8089.</div>
-                            <label for="inputSplunkManagementPortHelp" class="form-label form-validation-message {modalValidation?.splunkManagementPort == null ? 'd-none' : ''}">{modalValidation?.splunkManagementPort}</label>
-                        </div>
-                    </div>
-                    <p class="form-label form-validation-message">{modalValidation?.generalError}</p>
-                    <hr class="mt-3" />
-                    <div class="row mt-2">
-                        <div class="col-12 d-flex justify-content-center align-items-center">
-                            <h5 class="">Server Classes</h5>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-5">
-                            <select id="unselectServerClasses" multiple style="height: 30em; width: 100%">
-                                {#each unselectedServerClasses as sc}
-                                    <option value={sc.id}>{sc.name}</option>
-                                {/each}
-                            </select>
-                        </div>
-                        <div class="col-2 d-flex align-items-center justify-content-center">
-                            <button
-                                onclick={() => {
-                                    moveServerClassToLeftSelect();
-                                }}>&lt;</button
-                            >
-                            <br />
-                            <button
-                                onclick={() => {
-                                    moveServerClassToRightSelect();
-                                }}>&gt;</button
-                            >
-                        </div>
-                        <div class="col-5">
-                            <select id="selectServerClasses" multiple style="height: 30em;  width: 100%">
-                                {#each selectedServerClasses as sc}
-                                    <option value={sc.id}>{sc.name}</option>
-                                {/each}
-                            </select>
-                        </div>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <button
-                    type="submit"
-                    class="btn btn-primary"
-                    onclick={() => {
-                        saveHostValues(null);
-                    }}>Save changes</button
-                >
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button
+                        type="submit"
+                        class="btn btn-primary"
+                        onclick={() => {
+                            saveHostValues(null);
+                        }}>Save changes</button
+                    >
+                </div>
             </div>
         </div>
     </div>
-</div>
 
-<div class="modal fade" id="deleteHostModal" tabindex="-1" aria-labelledby="deleteHostModal" aria-hidden="true">
-    <div class="modal-dialog modal-sm">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="exampleModalLabel">Confirm Deletion of {deleteHostObject?.hostname}</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <form>
-                    <div class="row">
-                        <div class="col-6">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+    <div class="modal fade" id="deleteHostModal" tabindex="-1" aria-labelledby="deleteHostModal" aria-hidden="true">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="exampleModalLabel">Confirm Deletion of {deleteHostObject?.hostname}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form>
+                        <div class="row">
+                            <div class="col-6">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            </div>
+                            <div class="col-6">
+                                <button
+                                    type="submit"
+                                    class="btn btn-danger"
+                                    onclick={() => {
+                                        deleteHost(deleteHostObject);
+                                    }}>Confirm</button
+                                >
+                            </div>
                         </div>
-                        <div class="col-6">
-                            <button
-                                type="submit"
-                                class="btn btn-danger"
-                                onclick={() => {
-                                    deleteHost(deleteHostObject);
-                                }}>Confirm</button
-                            >
-                        </div>
-                    </div>
-                </form>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
-</div>
+{/if}
 
 <span id="TestFloatingAdd">
-    <button
-        id="RedeployAllAddons"
-        class="btn btn-success btn-lg"
-        type="button"
-        onclick={() => {
-            redeployAllAddOns();
-        }}>Deploy All</button
-    >
-    <button
-        class="btn btn-success btn-lg"
-        type="button"
-        onclick={() => {
-            showModalNewHost();
-        }}>Add</button
-    >
+    {#if permissions.addonDeployments === AddonDeploymentPermissions.CanRun}
+        <button
+            id="RedeployAllAddons"
+            class="btn btn-success btn-lg"
+            type="button"
+            onclick={() => {
+                redeployAllAddOns();
+            }}>Deploy All</button
+        >
+    {/if}
+
+    {#if permissions.hostManagement === HostManagementPermissions.CanEdit}
+        <button
+            class="btn btn-success btn-lg"
+            type="button"
+            onclick={() => {
+                showModalNewHost();
+            }}>Add</button
+        >
+    {/if}
 </span>

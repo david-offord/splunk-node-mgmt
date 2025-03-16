@@ -4,12 +4,17 @@ import type { RequestHandler } from './$types';
 import * as af from '$lib/workingDirectoryFunctions/ansibleInventoryManagementFunctions.js' //example of importing a bunch of functions
 import * as isIp from 'is-ip';
 import * as net from 'net';
-import { isNullOrUndefined } from '$lib/utils';
+import { canUserAccessApi, isNullOrUndefined } from '$lib/utils';
 import { addOrUpdateHost, deleteHost, getHosts, getSingleHost } from '$lib/server/db/models/hosts';
 import { getServerClassByHosts } from '$lib/server/db/models/serverClass';
 
 //for updating/adding host
-export const GET: RequestHandler = async function GET({ request, url }) {
+export const GET: RequestHandler = async function GET({ locals, request, url }) {
+    let canAccess = canUserAccessApi(locals.userPermissions, url.pathname, request.method);
+    if (!canAccess) {
+        return json({ error: "You do not have permission to access this API" }, { status: 403 });
+    }
+
     //GET HOST INFORMATION
     let rowInformation = await getHosts(url.searchParams.get('search'), parseInt(url.searchParams.get('page')), 10);
     let rows = rowInformation.rows as Host[];
@@ -46,7 +51,12 @@ export const GET: RequestHandler = async function GET({ request, url }) {
 }
 
 //for updating/adding host
-export const POST: RequestHandler = async function POST({ request }) {
+export const POST: RequestHandler = async function POST({ locals, url, request }) {
+    let canAccess = canUserAccessApi(locals.userPermissions, url.pathname, request.method);
+    if (!canAccess) {
+        return json({ error: "You do not have permission to access this API" }, { status: 403 });
+    }
+
     //get the host from the request
     let host: Host = await request.json();
 
@@ -136,7 +146,12 @@ export const POST: RequestHandler = async function POST({ request }) {
 
 
 //for updating/adding host
-export const DELETE: RequestHandler = async function DELETE({ request }) {
+export const DELETE: RequestHandler = async function DELETE({ locals, url, request }) {
+    let canAccess = canUserAccessApi(locals.userPermissions, url.pathname, request.method);
+    if (!canAccess) {
+        return json({ error: "You do not have permission to access this API" }, { status: 403 });
+    }
+
     //get the host from the request
     let host: Host = await request.json();
 

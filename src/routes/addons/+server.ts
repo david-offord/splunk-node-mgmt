@@ -4,13 +4,18 @@ import type { RequestHandler } from './$types';
 import { FileSaveResults } from "$lib/enums"
 
 import * as aoff from "$lib/workingDirectoryFunctions/addOnFileFunctions"
-import { isNullOrUndefined } from '$lib/utils';
+import { canUserAccessApi, isNullOrUndefined } from '$lib/utils';
 import { deleteAddon, getAllAddons, getSingleAddon, insertNewAddon, updateAddon } from '$lib/server/db/models/addons';
 import { getServerClassByAddon } from '$lib/server/db/models/serverClass';
 
 
 //for getting all addons
-export const GET: RequestHandler = async function GET({ request }) {
+export const GET: RequestHandler = async function GET({ locals, url, request }) {
+    let canAccess = canUserAccessApi(locals.userPermissions, url.pathname, request.method);
+    if (!canAccess) {
+        return json({ error: "You do not have permission to access this API" }, { status: 403 });
+    }
+
     //get all addons
     let addonsInformation = await getAllAddons();
     let addons: Array<AddOn> = addonsInformation.rows;
@@ -50,7 +55,12 @@ export const GET: RequestHandler = async function GET({ request }) {
 }
 
 //create new server class
-export const POST: RequestHandler = async function POST({ request }) {
+export const POST: RequestHandler = async function POST({ locals, url, request }) {
+    let canAccess = canUserAccessApi(locals.userPermissions, url.pathname, request.method);
+    if (!canAccess) {
+        return json({ error: "You do not have permission to access this API" }, { status: 403 });
+    }
+
     let formdata: any = await request.formData();
     let newAddon: any = formdata;
     let validationObj: AddonValidationObject = {};
@@ -125,7 +135,12 @@ export const POST: RequestHandler = async function POST({ request }) {
 }
 
 //for updating addon
-export const PATCH: RequestHandler = async function PATH({ request }) {
+export const PATCH: RequestHandler = async function PATH({ locals, url, request }) {
+    let canAccess = canUserAccessApi(locals.userPermissions, url.pathname, request.method);
+    if (!canAccess) {
+        return json({ error: "You do not have permission to access this API" }, { status: 403 });
+    }
+
     let formdata: any = await request.formData();
     let newAddon: any = formdata;
     let validationObj: AddonValidationObject = {};
@@ -219,7 +234,12 @@ export const PATCH: RequestHandler = async function PATH({ request }) {
 }
 
 //deleting addon
-export const DELETE: RequestHandler = async function DELETE({ request }) {
+export const DELETE: RequestHandler = async function DELETE({ locals, url, request }) {
+    let canAccess = canUserAccessApi(locals.userPermissions, url.pathname, request.method);
+    if (!canAccess) {
+        return json({ error: "You do not have permission to access this API" }, { status: 403 });
+    }
+
     let addon: AddOn = await request.json();
 
     //delete the db entry

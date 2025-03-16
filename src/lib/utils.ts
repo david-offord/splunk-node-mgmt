@@ -61,34 +61,34 @@ export function canUserAccessApi(userPermissions: UserWithPermissions, url: stri
 
     //host management edits
     if (url === "/" && userPermissions.hostManagement === HostManagementPermissions.CanEdit) {
-        return false;
+        return true;
     }
     //the addon edits
     if (url.indexOf('addons') !== -1 && userPermissions.addonManagement === AddOnManagementPermissions.CanEdit) {
-        return false;
+        return true;
     }
     //server class edits
     if (url.indexOf('serverclass') !== -1 && userPermissions.serverClassManagement === ServerClassManagementPermissions.CanEdit) {
-        return false;
+        return true;
     }
     //playbook edits
     if (url.indexOf('playbooks') !== -1 && userPermissions.playbookManagement === PlaybookManagementPermissions.CanEdit) {
-        return false;
+        return true;
     }
     //playbook runs
     if (url.indexOf('playbooks') !== -1 && url.indexOf('run') !== -1 && userPermissions.playbookRunning === PlaybookRunPermissions.CanRun) {
-        return false;
+        return true;
     }
     //deploying addons
     if (url.indexOf('deployaddons') !== -1 && userPermissions.addonDeployments === AddonDeploymentPermissions.CanRun) {
-        return false;
+        return true;
     }
     //users edit
     if (url.indexOf('users') !== -1 && userPermissions.userManagement === UserManagementPermissions.CanEdit) {
-        return false;
+        return true;
     }
 
-    return true;
+    return false;
 }
 
 

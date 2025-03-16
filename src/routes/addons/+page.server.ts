@@ -3,7 +3,7 @@ import type { AddOn } from "$lib/types.ts"
 import { getServerClassByAddon, getServerClasses } from '$lib/server/db/models/serverClass';
 import { getAllAddons } from '$lib/server/db/models/addons';
 
-export const load: PageServerLoad = async ({ locals }) => {
+export const load: PageServerLoad = async ({ locals, parent }) => {
     //get all addons
     let addonsInformation = await getAllAddons();
     let addons: Array<AddOn> = addonsInformation.rows;
@@ -44,6 +44,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 
 
     return {
+        parent: await parent(),
         addons: addons,
         serverClasses: allServerClasses
     }

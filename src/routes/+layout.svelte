@@ -53,7 +53,14 @@
 
         <div style="">
             <div class="d-flex justify-content-end">
-                <h4 class="nav-link">{username}</h4>
+                {#if username !== null && typeof username !== "undefined" && username !== ""}
+                    <h4 class="nav-link">
+                        {username}
+                        <a aria-label="Change Password" href="/users/changepassword">
+                            <i class="bi bi-key"></i>
+                        </a>
+                    </h4>
+                {/if}
             </div>
         </div>
     </div>

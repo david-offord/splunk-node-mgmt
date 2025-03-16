@@ -1,6 +1,7 @@
 import { db } from '$lib/server/db/client';
 import { userPermissions, users } from '$lib/server/db/schema';
 import { eq } from 'drizzle-orm';
+import * as crypto from 'crypto';
 
 const getUserByEmail = async (email: string) => {
     return await db.select().from(users).where(eq(users.email, email)).get();
@@ -44,4 +45,18 @@ const deleteUser = async (id: string) => {
         .where(eq(users.id, id));
 };
 
-export { createNewUser, getUserByEmail, updateUser, deleteUser };
+
+
+const updateUserPassword = async (id: string, newPassword: string) => {
+    let hashedPassword = crypto.hash('sha256', newPassword);
+
+    //update the hashed password
+    await db
+        .update(users)
+        .set({
+            hashedPassword: hashedPassword
+        } as any)
+        .where(eq(users.id, id));
+};
+
+export { createNewUser, getUserByEmail, updateUser, deleteUser, updateUserPassword };

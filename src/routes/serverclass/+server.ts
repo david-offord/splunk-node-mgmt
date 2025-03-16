@@ -1,18 +1,28 @@
 import { fail, json } from '@sveltejs/kit';
 import type { Host, ServerClasses } from "$lib/types.ts"
 import type { RequestHandler } from './$types';
-import { isNullOrUndefined } from '$lib/utils';
+import { canUserAccessApi, isNullOrUndefined } from '$lib/utils';
 import { getServerClassPageLoadData } from './serverClassFunctions';
 import { deleteServerClass, insertNewServerClass, updateServerClassAddons, updateServerClassHosts } from '$lib/server/db/models/serverClass';
 
 //for updating/adding server classes
-export const GET: RequestHandler = async function GET({ request }) {
+export const GET: RequestHandler = async function GET({ locals, url, request }) {
+    let canAccess = canUserAccessApi(locals.userPermissions, url.pathname, request.method);
+    if (!canAccess) {
+        return json({ error: "You do not have permission to access this API" }, { status: 403 });
+    }
+
     let returnObject = await getServerClassPageLoadData(false)
     return json(returnObject.serverClasses);
 }
 
 //create new server class
-export const POST: RequestHandler = async function POST({ request }) {
+export const POST: RequestHandler = async function POST({ locals, url, request }) {
+    let canAccess = canUserAccessApi(locals.userPermissions, url.pathname, request.method);
+    if (!canAccess) {
+        return json({ error: "You do not have permission to access this API" }, { status: 403 });
+    }
+
     let newsc = await request.json();
 
     //send the new name
@@ -22,7 +32,12 @@ export const POST: RequestHandler = async function POST({ request }) {
 }
 
 //for updating serverclass
-export const PATCH: RequestHandler = async function PATH({ request }) {
+export const PATCH: RequestHandler = async function PATH({ locals, url, request }) {
+    let canAccess = canUserAccessApi(locals.userPermissions, url.pathname, request.method);
+    if (!canAccess) {
+        return json({ error: "You do not have permission to access this API" }, { status: 403 });
+    }
+
     //get the serverclass and other info from the request
     let apiData = await request.json() as ServerClasses;
 
@@ -49,7 +64,12 @@ export const PATCH: RequestHandler = async function PATH({ request }) {
 }
 
 //deleting server class
-export const DELETE: RequestHandler = async function DELETE({ request }) {
+export const DELETE: RequestHandler = async function DELETE({ locals, url, request }) {
+    let canAccess = canUserAccessApi(locals.userPermissions, url.pathname, request.method);
+    if (!canAccess) {
+        return json({ error: "You do not have permission to access this API" }, { status: 403 });
+    }
+
     let sc: ServerClasses = await request.json();
     await deleteServerClass(sc.id);
     return json(true);

@@ -4,9 +4,14 @@ import type { AnsiblePlaybookModelVariables, AnsiblePlaybookModel } from '$lib/t
 import { getSingleAnsiblePlaybook } from '$lib/server/db/models/ansiblePlaybooks';
 import { callAnsiblePlaybook } from '$lib/managementFunctions/ansibleManagementFunctions';
 import { addJobLog, completeJob, createJob } from '$lib/server/db/models/jobs';
-import { isNullOrUndefined } from '$lib/utils';
+import { canUserAccessApi, isNullOrUndefined } from '$lib/utils';
 
 export const POST: RequestHandler = async function GET({ request, url, locals }) {
+    let canAccess = canUserAccessApi(locals.userPermissions, url.pathname, request.method);
+    if (!canAccess) {
+        return json({ error: "You do not have permission to access this API" }, { status: 403 });
+    }
+
     //get playbook from call
     let apiPlaybook: AnsiblePlaybookModelVariables = await request.json();
 

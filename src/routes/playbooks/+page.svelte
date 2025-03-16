@@ -1,13 +1,15 @@
 <script lang="ts">
-    import type { AnsiblePlaybookModel } from "$lib/types";
+    import type { AnsiblePlaybookModel, UserWithPermissions } from "$lib/types";
     import type { Modal } from "bootstrap";
     import type { PageServerData } from "./$types";
     import { onMount } from "svelte";
     import { page } from "$app/stores";
+    import { PlaybookManagementPermissions, PlaybookRunPermissions } from "$lib/enums";
 
     //load from server side
     let { data }: { data: PageServerData; form: FormData } = $props();
     let allPlaybooks: AnsiblePlaybookModel[] = $state(data.playbooks);
+    let permissions: UserWithPermissions = data.parent.permissions;
 
     //all variables used for editing and deleting
     let currentlyEditingPlaybook: AnsiblePlaybookModel = $state(null);
@@ -200,7 +202,9 @@
                 <th>Playbook Name</th>
                 <th>Playbook Notes</th>
                 <th>Created By</th>
-                <th>Actions</th>
+                {#if permissions.playbookManagement === PlaybookManagementPermissions.CanEdit || permissions.playbookRunning === PlaybookRunPermissions.CanRun}
+                    <th>Actions</th>
+                {/if}
             </tr>
         </thead>
         <tbody>
@@ -209,112 +213,120 @@
                     <td>{playbook.playbookName}</td>
                     <td>{playbook.playbookNotes?.length > 30 ? playbook.playbookNotes?.slice(0, 30) + "..." : playbook?.playbookNotes}</td>
                     <td>{playbook.createdByName}</td>
-                    <td>
-                        <button aria-label="Edit Playbook" class="btn btn btn-table-action" data-bs-toggle="tooltip" data-placement="top" title="Edit Playbook" onclick={() => editPlaybookModal(playbook)}>
-                            <i class="bi bi-pencil"></i>
-                        </button>
-                        <button aria-label="Delete Playbook" class="btn btn-table-action" data-bs-toggle="tooltip" data-placement="top" title="Delete Playbook" onclick={() => confirmPlaybookDeletion(playbook)}>
-                            <i class="bi bi-trash"></i>
-                        </button>
-                        <a aria-label="Run Playbook" class="btn btn btn-table-action" data-bs-toggle="tooltip" data-placement="top" title="Run Playbook" href="/playbooks/run/{playbook.id}">
-                            <i class="bi bi-play-fill"></i>
-                        </a>
-                    </td>
+                    {#if permissions.playbookManagement === PlaybookManagementPermissions.CanEdit || permissions.playbookRunning === PlaybookRunPermissions.CanRun}
+                        <td>
+                            {#if permissions.playbookManagement === PlaybookManagementPermissions.CanEdit}
+                                <button aria-label="Edit Playbook" class="btn btn btn-table-action" data-bs-toggle="tooltip" data-placement="top" title="Edit Playbook" onclick={() => editPlaybookModal(playbook)}>
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                                <button aria-label="Delete Playbook" class="btn btn-table-action" data-bs-toggle="tooltip" data-placement="top" title="Delete Playbook" onclick={() => confirmPlaybookDeletion(playbook)}>
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            {/if}
+                            {#if permissions.playbookRunning === PlaybookRunPermissions.CanRun}
+                                <a aria-label="Run Playbook" class="btn btn btn-table-action" data-bs-toggle="tooltip" data-placement="top" title="Run Playbook" href="/playbooks/run/{playbook.id}">
+                                    <i class="bi bi-play-fill"></i>
+                                </a>
+                            {/if}
+                        </td>
+                    {/if}
                 </tr>
             {/each}
         </tbody>
     </table>
 </div>
 
-<!--Edit modal-->
-<div class="modal fade" id="playbookEditModal" tabindex="-1" aria-labelledby="playbookEditModal" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="exampleModalLabel">{currentlyEditingPlaybook === null ? "Create New Playbook" : `Editing ${currentlyEditingPlaybook.playbookName}`}</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <form>
-                    <div class="row">
-                        <div class="col-12">
-                            <label for="inputPlaybookname" class="form-label">Playbook Name</label>
-                            <input bind:value={editPlaybookName} type="text" required class="form-control" id="inputPlaybookname" />
-                            <!-- <label for="inputPlaybookname" class="form-label form-validation-message {modalValidation?.playbookname == null ? 'd-none' : ''}">{modalValidation?.playbookname}</label> -->
-                        </div>
-                    </div>
-                    <div class="row mt-3">
-                        <div class="col-12">
-                            <label for="inputIpAddress" class="form-label">Playbook Description</label>
-                            <textarea bind:value={editPlaybookDescription} required class="form-control" id="inputIpAddress" style="resize: none; height:8em;"></textarea>
-                            <!-- <label for="inputPlaybookname" class="form-label form-validation-message {modalValidation?.ipAddress == null ? 'd-none' : ''}">{modalValidation?.ipAddress}</label> -->
-                        </div>
-                    </div>
-                    <div class="row mt-3">
-                        <div class="col-12">
-                            <label for="inputIpAddress" class="form-label">Playbook Contents</label>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-12">
-                            <div style="height:40rem;">
-                                <div id="editor"></div>
+{#if permissions.playbookManagement === PlaybookManagementPermissions.CanEdit}
+    <!--Edit modal-->
+    <div class="modal fade" id="playbookEditModal" tabindex="-1" aria-labelledby="playbookEditModal" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="exampleModalLabel">{currentlyEditingPlaybook === null ? "Create New Playbook" : `Editing ${currentlyEditingPlaybook.playbookName}`}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form>
+                        <div class="row">
+                            <div class="col-12">
+                                <label for="inputPlaybookname" class="form-label">Playbook Name</label>
+                                <input bind:value={editPlaybookName} type="text" required class="form-control" id="inputPlaybookname" />
+                                <!-- <label for="inputPlaybookname" class="form-label form-validation-message {modalValidation?.playbookname == null ? 'd-none' : ''}">{modalValidation?.playbookname}</label> -->
                             </div>
                         </div>
-                    </div>
-                </form>
-            </div>
+                        <div class="row mt-3">
+                            <div class="col-12">
+                                <label for="inputIpAddress" class="form-label">Playbook Description</label>
+                                <textarea bind:value={editPlaybookDescription} required class="form-control" id="inputIpAddress" style="resize: none; height:8em;"></textarea>
+                                <!-- <label for="inputPlaybookname" class="form-label form-validation-message {modalValidation?.ipAddress == null ? 'd-none' : ''}">{modalValidation?.ipAddress}</label> -->
+                            </div>
+                        </div>
+                        <div class="row mt-3">
+                            <div class="col-12">
+                                <label for="inputIpAddress" class="form-label">Playbook Contents</label>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-12">
+                                <div style="height:40rem;">
+                                    <div id="editor"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
 
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <button
-                    type="submit"
-                    class="btn btn-primary"
-                    onclick={() => {
-                        savePlaybook();
-                    }}>Save changes</button
-                >
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button
+                        type="submit"
+                        class="btn btn-primary"
+                        onclick={() => {
+                            savePlaybook();
+                        }}>Save changes</button
+                    >
+                </div>
             </div>
         </div>
     </div>
-</div>
 
-<!--Confirm deletion of a playbook modal-->
-<div class="modal fade" id="deletePlaybookModal" tabindex="-1" aria-labelledby="deletePlaybookModal" aria-hidden="true">
-    <div class="modal-dialog modal-sm">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="exampleModalLabel">Confirm Deletion of {currentlyEditingPlaybook?.playbookName}</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <form>
-                    <div class="row">
-                        <div class="col-6">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+    <!--Confirm deletion of a playbook modal-->
+    <div class="modal fade" id="deletePlaybookModal" tabindex="-1" aria-labelledby="deletePlaybookModal" aria-hidden="true">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="exampleModalLabel">Confirm Deletion of {currentlyEditingPlaybook?.playbookName}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form>
+                        <div class="row">
+                            <div class="col-6">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            </div>
+                            <div class="col-6">
+                                <button
+                                    type="submit"
+                                    class="btn btn-danger"
+                                    onclick={() => {
+                                        deletePlaybook();
+                                    }}>Confirm</button
+                                >
+                            </div>
                         </div>
-                        <div class="col-6">
-                            <button
-                                type="submit"
-                                class="btn btn-danger"
-                                onclick={() => {
-                                    deletePlaybook();
-                                }}>Confirm</button
-                            >
-                        </div>
-                    </div>
-                </form>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
-</div>
 
-<span id="TestFloatingAdd">
-    <button
-        class="btn btn-success btn-lg"
-        type="button"
-        onclick={() => {
-            addNewPlaybookModal();
-        }}>Add</button
-    >
-</span>
+    <span id="TestFloatingAdd">
+        <button
+            class="btn btn-success btn-lg"
+            type="button"
+            onclick={() => {
+                addNewPlaybookModal();
+            }}>Add</button
+        >
+    </span>
+{/if}

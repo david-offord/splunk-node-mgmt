@@ -1,15 +1,17 @@
 <script lang="ts">
-    import type { ServerClasses, AddOn, ServerClassJoinAddon, AddonValidationObject } from "$lib/types";
+    import type { ServerClasses, AddOn, ServerClassJoinAddon, AddonValidationObject, UserWithPermissions } from "$lib/types";
     import type { PageServerData } from "./$types";
     import type { Modal } from "bootstrap";
     import type * as bootstrap from "bootstrap";
     import { page } from "$app/stores";
     import { onMount } from "svelte";
+    import { AddonDeploymentPermissions, AddOnManagementPermissions } from "$lib/enums";
 
     //get the hosts from the db
     let { data }: { data: PageServerData; form: FormData } = $props();
     let addOns = $state(data.addons);
     let possibleServerClasses = $state(data.serverClasses);
+    let permissions: UserWithPermissions = data.parent.permissions;
 
     let unselectedServerClasses = $state(data.serverClasses);
     let selectedServerClasses: ServerClasses[] = $state([]);
@@ -298,7 +300,9 @@
                 <th>File Name</th>
                 <th>Folder Name</th>
                 <th># Server Classes Including This</th>
-                <th>Actions</th>
+                {#if permissions.addonManagement === AddOnManagementPermissions.CanEdit}
+                    <th>Actions</th>
+                {/if}
             </tr>
         </thead>
         <tbody>
@@ -308,158 +312,162 @@
                     <td> {addon.addonFileLocation} </td>
                     <td> {addon.addonFolderName} </td>
                     <td> {addon.serverClassesAssigned?.length} </td>
-                    <td>
-                        <button
-                            class="ms-1 table-button"
-                            onclick={() => {
-                                showModalAddon(addon);
-                            }}
-                            aria-label="Edit Add-On"
-                        >
-                            <i class="bi bi-pencil"></i>
-                        </button>
-                        <button
-                            class="ms-3 table-button"
-                            onclick={() => {
-                                showHideDeleteModal(true, addon);
-                            }}
-                            aria-label="Delete Add-On"
-                        >
-                            <i class="bi bi-trash"></i>
-                        </button>
-                    </td>
+                    {#if permissions.addonManagement === AddOnManagementPermissions.CanEdit}
+                        <td>
+                            <button
+                                class="btn btn-table-action me-2"
+                                onclick={() => {
+                                    showModalAddon(addon);
+                                }}
+                                aria-label="Edit Add-On"
+                            >
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                            <button
+                                class="btn btn-table-action me-2"
+                                onclick={() => {
+                                    showHideDeleteModal(true, addon);
+                                }}
+                                aria-label="Delete Add-On"
+                            >
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </td>
+                    {/if}
                 </tr>
             {/each}
         </tbody>
     </table>
 </div>
 
-<!--Edit modal-->
-<div class="modal fade" id="editAddonModal" tabindex="-1" aria-labelledby="editAddonModal" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="exampleModalLabel">{editTitle}</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <form>
-                    <div class="row">
-                        <div class="col-sm-12 col-lg-6">
-                            <label for="inputAddonName" class="form-label">Add-on Name</label>
-                            <input bind:value={modalAddonDisplayName} type="text" required class="form-control" id="inputAddonName" />
-                            <label for="inputAddonName" class="form-label form-validation-message {modalValidation == null ? 'd-none' : ''}">{modalValidation?.addonName}</label>
+{#if permissions.addonManagement === AddOnManagementPermissions.CanEdit}
+    <!--Edit modal-->
+    <div class="modal fade" id="editAddonModal" tabindex="-1" aria-labelledby="editAddonModal" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="exampleModalLabel">{editTitle}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form>
+                        <div class="row">
+                            <div class="col-sm-12 col-lg-6">
+                                <label for="inputAddonName" class="form-label">Add-on Name</label>
+                                <input bind:value={modalAddonDisplayName} type="text" required class="form-control" id="inputAddonName" />
+                                <label for="inputAddonName" class="form-label form-validation-message {modalValidation == null ? 'd-none' : ''}">{modalValidation?.addonName}</label>
+                            </div>
+                            <div class="col-sm-12 col-lg-6">
+                                <label for="inputAddonFile" class="form-label">Add-on File (Do not upload to retain current)</label>
+                                <input type="file" accept=".tar.gz,.tar,.spl,.gz" required class="form-control" id="inputAddonFile" />
+                                <label for="" class="form-label">{currentEditingAddon == null ? "" : "Current File: " + currentEditingAddon?.addonFileLocation}</label>
+                                <label for="inputAddonFile" class="form-label form-validation-message {modalValidation == null ? 'd-none' : ''}">{modalValidation?.addOnFileError}</label>
+                            </div>
                         </div>
-                        <div class="col-sm-12 col-lg-6">
-                            <label for="inputAddonFile" class="form-label">Add-on File (Do not upload to retain current)</label>
-                            <input type="file" accept=".tar.gz,.tar,.spl,.gz" required class="form-control" id="inputAddonFile" />
-                            <label for="" class="form-label">{currentEditingAddon == null ? "" : "Current File: " + currentEditingAddon?.addonFileLocation}</label>
-                            <label for="inputAddonFile" class="form-label form-validation-message {modalValidation == null ? 'd-none' : ''}">{modalValidation?.addOnFileError}</label>
+                        <div class="row">
+                            <div class="col-sm-12 col-lg-6">
+                                <label for="inputIgnoredFiles" class="form-label">Ignored Files/Paths</label>
+                                <input bind:value={modalAddOnIgnoredPaths} type="text" required class="form-control" id="inputIgnoredFiles" />
+                                <div id="splunkPasswordHelpBlock" class="form-text">Assuming the working directory is the add-on, write these as a comma seperated list of fileblobs for an rm -rf command.</div>
+                                <label for="inputIgnoredFiles" class="form-label form-validation-message {modalValidation == null ? 'd-none' : ''}">{modalValidation?.ignoredFiles}</label>
+                            </div>
+                            <div class="col-sm-12 col-lg-6">
+                                <label for="inputActionOnInstallation" class="form-label">Action on Installation</label>
+                                <select bind:value={modalAddonAction} class="form-control" id="inputActionOnInstallation">
+                                    <option value="nothing">Nothing</option>
+                                    <option value="debugrefresh">Debug Refresh</option>
+                                    <option value="restart">Restart</option>
+                                </select>
+                                <label for="inputActionOnInstallation" class="form-label form-validation-message {modalValidation == null ? 'd-none' : ''}">{modalValidation?.actionOnInstallation}</label>
+                            </div>
                         </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-sm-12 col-lg-6">
-                            <label for="inputIgnoredFiles" class="form-label">Ignored Files/Paths</label>
-                            <input bind:value={modalAddOnIgnoredPaths} type="text" required class="form-control" id="inputIgnoredFiles" />
-                            <div id="splunkPasswordHelpBlock" class="form-text">Assuming the working directory is the add-on, write these as a comma seperated list of fileblobs for an rm -rf command.</div>
-                            <label for="inputIgnoredFiles" class="form-label form-validation-message {modalValidation == null ? 'd-none' : ''}">{modalValidation?.ignoredFiles}</label>
+                        <div class="row mt-3">
+                            <div class="col-12">
+                                <h3 class="d-flex justify-content-center">Server Classes</h3>
+                            </div>
                         </div>
-                        <div class="col-sm-12 col-lg-6">
-                            <label for="inputActionOnInstallation" class="form-label">Action on Installation</label>
-                            <select bind:value={modalAddonAction} class="form-control" id="inputActionOnInstallation">
-                                <option value="nothing">Nothing</option>
-                                <option value="debugrefresh">Debug Refresh</option>
-                                <option value="restart">Restart</option>
-                            </select>
-                            <label for="inputActionOnInstallation" class="form-label form-validation-message {modalValidation == null ? 'd-none' : ''}">{modalValidation?.actionOnInstallation}</label>
+                        <div class="row mt-1">
+                            <div class="col-5">
+                                <select id="unselectedHostSelect" multiple style="height: 20em; width: 100%">
+                                    {#each unselectedServerClasses as ps}
+                                        <option value={ps.id}>{ps.name}</option>
+                                    {/each}
+                                </select>
+                            </div>
+                            <div class="col-2 d-flex align-items-center justify-content-center">
+                                <button
+                                    type="button"
+                                    onclick={() => {
+                                        moveHostToLeftModal();
+                                    }}>&lt;</button
+                                >
+                                <br />
+                                <button
+                                    type="button"
+                                    onclick={() => {
+                                        moveHostToRightModal();
+                                    }}>&gt;</button
+                                >
+                            </div>
+                            <div class="col-5">
+                                <select id="selectedHostSelect" multiple style="height: 20em;  width: 100%">
+                                    {#each selectedServerClasses as ps}
+                                        <option value={ps.id}>{ps.name}</option>
+                                    {/each}
+                                </select>
+                            </div>
                         </div>
-                    </div>
-                    <div class="row mt-3">
-                        <div class="col-12">
-                            <h3 class="d-flex justify-content-center">Server Classes</h3>
-                        </div>
-                    </div>
-                    <div class="row mt-1">
-                        <div class="col-5">
-                            <select id="unselectedHostSelect" multiple style="height: 20em; width: 100%">
-                                {#each unselectedServerClasses as ps}
-                                    <option value={ps.id}>{ps.name}</option>
-                                {/each}
-                            </select>
-                        </div>
-                        <div class="col-2 d-flex align-items-center justify-content-center">
-                            <button
-                                type="button"
-                                onclick={() => {
-                                    moveHostToLeftModal();
-                                }}>&lt;</button
-                            >
-                            <br />
-                            <button
-                                type="button"
-                                onclick={() => {
-                                    moveHostToRightModal();
-                                }}>&gt;</button
-                            >
-                        </div>
-                        <div class="col-5">
-                            <select id="selectedHostSelect" multiple style="height: 20em;  width: 100%">
-                                {#each selectedServerClasses as ps}
-                                    <option value={ps.id}>{ps.name}</option>
-                                {/each}
-                            </select>
-                        </div>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <button
-                    type="submit"
-                    class="btn btn-primary"
-                    onclick={() => {
-                        saveModalChanges();
-                    }}>Save changes</button
-                >
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="modal fade" id="deleteAddonModal" tabindex="-1" aria-labelledby="deleteAddonModal" aria-hidden="true">
-    <div class="modal-dialog modal-sm">
-        <div class="modal-content">
-            <div class="modal-body">
-                <h5 class="modal-title" id="exampleModalLabel">Confirm Deletion of<br />"{deleteAddonObj?.displayName}"</h5>
-            </div>
-            <div class="modal-footer">
-                <form>
-                    <div class="row">
-                        <div class="col-6">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                        </div>
-                        <div class="col-6">
-                            <button
-                                type="submit"
-                                class="btn btn-danger"
-                                onclick={() => {
-                                    deleteAddon(deleteAddonObj);
-                                }}>Confirm</button
-                            >
-                        </div>
-                    </div>
-                </form>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button
+                        type="submit"
+                        class="btn btn-primary"
+                        onclick={() => {
+                            saveModalChanges();
+                        }}>Save changes</button
+                    >
+                </div>
             </div>
         </div>
     </div>
-</div>
 
-<span id="TestFloatingAdd">
-    <button
-        class="btn btn-success btn-lg"
-        type="button"
-        onclick={() => {
-            showModalAddon();
-        }}>Add</button
-    >
-</span>
+    <div class="modal fade" id="deleteAddonModal" tabindex="-1" aria-labelledby="deleteAddonModal" aria-hidden="true">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-content">
+                <div class="modal-body">
+                    <h5 class="modal-title" id="exampleModalLabel">Confirm Deletion of<br />"{deleteAddonObj?.displayName}"</h5>
+                </div>
+                <div class="modal-footer">
+                    <form>
+                        <div class="row">
+                            <div class="col-6">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            </div>
+                            <div class="col-6">
+                                <button
+                                    type="submit"
+                                    class="btn btn-danger"
+                                    onclick={() => {
+                                        deleteAddon(deleteAddonObj);
+                                    }}>Confirm</button
+                                >
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <span id="TestFloatingAdd">
+        <button
+            class="btn btn-success btn-lg"
+            type="button"
+            onclick={() => {
+                showModalAddon();
+            }}>Add</button
+        >
+    </span>
+{/if}

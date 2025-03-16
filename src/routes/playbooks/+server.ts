@@ -3,8 +3,14 @@ import type { RequestHandler } from './$types';
 import type { AnsiblePlaybookModel } from '$lib/types';
 import { createAnsiblePlaybook, deleteAnsiblePlaybook, getAnsiblePlaybooks, getSingleAnsiblePlaybook, updateAnsiblePlaybook } from '$lib/server/db/models/ansiblePlaybooks';
 import { createJob } from '$lib/server/db/models/jobs';
+import { canUserAccessApi } from '$lib/utils';
 
 export const GET: RequestHandler = async function GET({ request, url, locals }) {
+    let canAccess = canUserAccessApi(locals.userPermissions, url.pathname, request.method);
+    if (!canAccess) {
+        return json({ error: "You do not have permission to access this API" }, { status: 403 });
+    }
+
     let playbooks = await getAnsiblePlaybooks() as AnsiblePlaybookModel[];
 
     return json({
@@ -13,6 +19,11 @@ export const GET: RequestHandler = async function GET({ request, url, locals }) 
 }
 
 export const POST: RequestHandler = async function GET({ request, url, locals }) {
+    let canAccess = canUserAccessApi(locals.userPermissions, url.pathname, request.method);
+    if (!canAccess) {
+        return json({ error: "You do not have permission to access this API" }, { status: 403 });
+    }
+
     let playbook: AnsiblePlaybookModel = await request.json();
 
     //try to get an existing playbook that matches this
@@ -41,6 +52,11 @@ export const POST: RequestHandler = async function GET({ request, url, locals })
 
 
 export const PATCH: RequestHandler = async function GET({ request, url, locals }) {
+    let canAccess = canUserAccessApi(locals.userPermissions, url.pathname, request.method);
+    if (!canAccess) {
+        return json({ error: "You do not have permission to access this API" }, { status: 403 });
+    }
+
     let playbook: AnsiblePlaybookModel = await request.json();
 
     //try to get an existing playbook that matches this
@@ -66,6 +82,11 @@ export const PATCH: RequestHandler = async function GET({ request, url, locals }
 
 
 export const DELETE: RequestHandler = async function GET({ request, url, locals }) {
+    let canAccess = canUserAccessApi(locals.userPermissions, url.pathname, request.method);
+    if (!canAccess) {
+        return json({ error: "You do not have permission to access this API" }, { status: 403 });
+    }
+
     let playbook: AnsiblePlaybookModel = await request.json();
 
     //then, try to update it

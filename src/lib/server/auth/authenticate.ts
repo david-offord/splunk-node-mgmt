@@ -31,4 +31,21 @@ const loginAndCreateSession = async (userId: string) => {
     return sessionId;
 };
 
-export { checkIfUsernamePasswordValid, loginAndCreateSession };
+const checkIdAndPassword = async (userId: string, password: string) => {
+    let hashedPassword = crypto.hash('sha256', password);
+
+    //see if there is a match
+    let val = await db
+        .select()
+        .from(users)
+        .where(and(eq(users.id, userId), eq(users.hashedPassword, hashedPassword)))
+        .get();
+
+    //if there was no match, return false
+    if (isNullOrUndefined(val))
+        return false;
+
+    return true;
+};
+
+export { checkIfUsernamePasswordValid, loginAndCreateSession, checkIdAndPassword };
