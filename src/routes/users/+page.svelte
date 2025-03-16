@@ -124,14 +124,11 @@
     //Sends host to backend to update
     async function updateUsers(user: any) {
         const response = await fetch($page.url.pathname, { method: "PATCH", body: JSON.stringify(user) });
-        //TODO: VERIFY IT WAS A SUCCESS
     }
 
     //Sends host to backend to create a new user
     async function createUsers(user: any) {
         const response = await fetch($page.url.pathname, { method: "POST", body: JSON.stringify(user) });
-
-        //TODO: VERIFY IT WAS A SUCCESS
     }
 
     async function getUsers() {

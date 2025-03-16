@@ -225,7 +225,6 @@
 
         const response = await fetch(DEPLOY_ADDON_AD_HOC_ROUTE, { method: "POST", body: JSON.stringify(selectedHost) });
         await response.json();
-        //TODO: ERROR CHECKING
 
         //once it completes, replace the icon
         buttonPressed.removeAttribute("currentlyRefreshing");

@@ -98,7 +98,6 @@
             showHideEditModal(false);
             getAllPlaybooks();
         } else {
-            //TODO: ADD VALIDATION HERE
         }
     }
 
@@ -115,7 +114,6 @@
             await getAllPlaybooks();
             showHideEditModal(false);
         } else {
-            //TODO: ADD VALIDATION HERE
         }
     }
 

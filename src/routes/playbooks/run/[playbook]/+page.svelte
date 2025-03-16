@@ -79,14 +79,52 @@
         aceEditor.setReadOnly(true);
     }
 
-    //TODO: Implement this
-    function toggleAllHosts() {}
+    function toggleAllHosts() {
+        //get how many checkboxes there are, how many are checked
+        let selectedBoxes: HTMLInputElement[] = [...document.querySelectorAll(".host-selection-checkbox:checked")] as HTMLInputElement[];
+        let allBoxes: HTMLInputElement[] = [...document.querySelectorAll(".host-selection-checkbox")] as HTMLInputElement[];
+
+        //if all of them are already selected, deselect them all
+        if (selectedBoxes.length === allBoxes.length) {
+            allBoxes.forEach((x) => {
+                toggleHostJustId(x.value, false);
+                x.checked = false;
+            });
+        }
+        //if NONE are selected, toggle them all on
+        else if (selectedBoxes.length === 0) {
+            allBoxes.forEach((x) => {
+                toggleHostJustId(x.value, true);
+                x.checked = true;
+            });
+        }
+        //otherwise (some are toggled, some are not) toggle them all
+        else {
+            allBoxes.forEach((x) => {
+                toggleHostJustId(x.value, true);
+                x.checked = true;
+            });
+        }
+        updatePlaybookView();
+    }
+
+    function toggleHostJustId(id: string, add: boolean) {
+        let hostToToggle = hosts.find((x) => x.id.toString() == id);
+        //if its an add, and it isnt already in the array
+        if (add && selectedHosts.indexOf(hostToToggle) === -1) {
+            selectedHosts.push(hostToToggle);
+        }
+        //if its a removal, and its already in there
+        if (add === false) {
+            selectedHosts = selectedHosts.filter((x) => x !== hostToToggle);
+        }
+    }
 
     function toggleHost(host: Host) {
         if (selectedHosts.indexOf(host) === -1) {
             selectedHosts.push(host);
         } else {
-            selectedHosts.filter((x) => x !== host);
+            selectedHosts = selectedHosts.filter((x) => x !== host);
         }
         updatePlaybookView();
     }
@@ -246,7 +284,7 @@
                     <table class="table">
                         <thead>
                             <tr>
-                                <th><input class="form-check-input" type="checkbox" value="" id="flexCheckDefault" /></th>
+                                <th><input onchange={() => toggleAllHosts()} class="form-check-input" type="checkbox" value="" id="flexCheckDefault" /></th>
                                 <th>Host</th>
                                 <th>Customer Code</th>
                             </tr>
